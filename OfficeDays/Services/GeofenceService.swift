@@ -1,0 +1,405 @@
+import CoreLocation
+import Foundation
+import SwiftData
+import UserNotifications
+
+@MainActor
+final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let locationManager = CLLocationManager()
+    private let notificationService: NotificationService
+    private let userDefaults: UserDefaults
+    private let now: () -> Date
+    private let dwellTimeSeconds: TimeInterval = 15 * 60
+    private let entryTimestampsKey = "tracking.entryTimestamps"
+    private let lastCheckInOfficeKey = "tracking.lastCheckInOffice"
+    private let lastCheckInDateKey = "tracking.lastCheckInDate"
+
+    private var modelContext: ModelContext?
+    private var officesProvider: (() -> [OfficeLocation])?
+    private var attendanceRefreshHandler: (() -> Void)?
+    private var entryTimestamps: [String: Date]
+
+    @Published var authorizationStatus: CLAuthorizationStatus
+    @Published var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
+    @Published var lastCheckedInOffice: String?
+    @Published var lastCheckInDate: Date?
+    @Published var isMonitoring = false
+    @Published var errorMessage: String?
+    @Published var statusMessage = "Auto tracking is off"
+
+    var isTrackingEnabled: Bool {
+        AppPreferences.trackingEnabled
+    }
+
+    override init() {
+        self.notificationService = .shared
+        self.userDefaults = .standard
+        self.now = Date.init
+        self.entryTimestamps = Self.loadEntryTimestamps(from: .standard, key: "tracking.entryTimestamps")
+        self.authorizationStatus = locationManager.authorizationStatus
+        super.init()
+
+        locationManager.delegate = self
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.pausesLocationUpdatesAutomatically = true
+
+        lastCheckedInOffice = userDefaults.string(forKey: lastCheckInOfficeKey)
+        lastCheckInDate = userDefaults.object(forKey: lastCheckInDateKey) as? Date
+        refreshStatusMessage()
+        refreshNotificationStatus()
+    }
+
+    func configure(
+        modelContext: ModelContext,
+        officesProvider: @escaping () -> [OfficeLocation],
+        onAttendanceChange: @escaping () -> Void
+    ) {
+        self.modelContext = modelContext
+        self.officesProvider = officesProvider
+        self.attendanceRefreshHandler = onAttendanceChange
+        refreshMonitoring()
+        handleAppDidBecomeActive()
+    }
+
+    func enableTracking() {
+        AppPreferences.setTrackingEnabled(true)
+        requestAuthorization()
+        requestNotificationAuthorization()
+        scheduleMondayReminder()
+        refreshMonitoring()
+    }
+
+    func disableTracking() {
+        AppPreferences.setTrackingEnabled(false)
+        stopMonitoring()
+        notificationService.removeMondayNotification()
+        refreshStatusMessage()
+    }
+
+    func requestAuthorization() {
+        locationManager.requestAlwaysAuthorization()
+    }
+
+    func requestNotificationAuthorization() {
+        notificationService.requestAuthorization { [weak self] status, error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.notificationAuthorizationStatus = status
+                if let error {
+                    self.errorMessage = "Notification permission failed: \(error.localizedDescription)"
+                }
+                self.refreshStatusMessage()
+            }
+        }
+    }
+
+    func refreshMonitoring() {
+        refreshNotificationStatus()
+
+        guard AppPreferences.trackingEnabled else {
+            stopMonitoring()
+            return
+        }
+
+        guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else {
+            errorMessage = "Region monitoring is not available on this device."
+            isMonitoring = false
+            refreshStatusMessage()
+            return
+        }
+
+        guard authorizationStatus == .authorizedAlways else {
+            stopMonitoring(clearEntries: false)
+            refreshStatusMessage()
+            return
+        }
+
+        let offices = officesProvider?().filter(\.isEnabled) ?? []
+        guard !offices.isEmpty else {
+            stopMonitoring(clearEntries: false)
+            refreshStatusMessage()
+            return
+        }
+
+        for region in locationManager.monitoredRegions {
+            locationManager.stopMonitoring(for: region)
+        }
+
+        for office in offices {
+            let region = office.region
+            locationManager.startMonitoring(for: region)
+            locationManager.requestState(for: region)
+        }
+
+        isMonitoring = true
+        refreshStatusMessage()
+    }
+
+    func handleAppDidBecomeActive() {
+        authorizationStatus = locationManager.authorizationStatus
+        refreshNotificationStatus()
+        refreshMonitoring()
+        scheduleMondayReminder()
+
+        for region in locationManager.monitoredRegions {
+            if let circularRegion = region as? CLCircularRegion {
+                locationManager.requestState(for: circularRegion)
+            }
+        }
+    }
+
+    func dismissError() {
+        errorMessage = nil
+    }
+
+    // MARK: - CLLocationManagerDelegate
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+
+        // When the user grants "When In Use" from the initial prompt, iOS requires
+        // a second requestAlwaysAuthorization() call to show the upgrade prompt
+        // that lets the user choose "Change to Always Allow."
+        if authorizationStatus == .authorizedWhenInUse && AppPreferences.trackingEnabled {
+            locationManager.requestAlwaysAuthorization()
+        }
+
+        refreshMonitoring()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didStartMonitoringFor region: CLRegion) {
+        if let circularRegion = region as? CLCircularRegion {
+            manager.requestState(for: circularRegion)
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
+        errorMessage = "Monitoring failed: \(error.localizedDescription)"
+        refreshStatusMessage()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        errorMessage = "Location failed: \(error.localizedDescription)"
+        refreshStatusMessage()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
+        guard let circularRegion = region as? CLCircularRegion else { return }
+        guard DateHelper.isWeekday(now()) else { return }
+
+        persistEntryTimestamp(now(), for: circularRegion.identifier)
+
+        // Start significant-location-change monitoring so iOS wakes the app
+        // after ~15 minutes to evaluate the dwell threshold in the background.
+        locationManager.startMonitoringSignificantLocationChanges()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
+        guard let circularRegion = region as? CLCircularRegion else { return }
+        clearEntryTimestamp(for: circularRegion.identifier)
+        if entryTimestamps.isEmpty {
+            locationManager.stopMonitoringSignificantLocationChanges()
+        }
+        refreshStatusMessage()
+    }
+
+    // Fired by significant-location-change wakes in background.
+    // Re-check state for all monitored regions so dwell can be evaluated.
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        for region in locationManager.monitoredRegions {
+            if let circularRegion = region as? CLCircularRegion {
+                locationManager.requestState(for: circularRegion)
+            }
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
+        guard let circularRegion = region as? CLCircularRegion else { return }
+        guard DateHelper.isWeekday(now()) else { return }
+
+        switch state {
+        case .inside:
+            if entryTimestamps[circularRegion.identifier] == nil {
+                persistEntryTimestamp(now(), for: circularRegion.identifier)
+            }
+            evaluateEntryIfEligible(for: circularRegion.identifier)
+        case .outside:
+            clearEntryTimestamp(for: circularRegion.identifier)
+        default:
+            break
+        }
+    }
+
+    // MARK: - Private
+
+    private func scheduleMondayReminder() {
+        guard AppPreferences.trackingEnabled, let context = modelContext else { return }
+
+        let quarter = QuarterHelper.quarterInfo(for: now())
+        let startKey = AttendanceDay.key(for: quarter.startDate)
+        let endKey = AttendanceDay.key(for: quarter.endDate)
+        var descriptor = FetchDescriptor<AttendanceDay>(
+            predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= endKey && ($0.dayTypeRaw == "office" || $0.dayTypeRaw == "freeDay" || $0.dayTypeRaw == "travel") }
+        )
+        descriptor.fetchLimit = 200
+
+        let officeDays = (try? context.fetch(descriptor).count) ?? 0
+        let target = QuarterHelper.targetDaysPerQuarter
+
+        notificationService.scheduleMondayNotificationIfAuthorized(
+            officeDays: officeDays,
+            target: target,
+            quarterLabel: quarter.label
+        ) { [weak self] error in
+            DispatchQueue.main.async {
+                if let error {
+                    self?.errorMessage = "Monday reminder scheduling failed: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    private func stopMonitoring(clearEntries: Bool = true) {
+        for region in locationManager.monitoredRegions {
+            locationManager.stopMonitoring(for: region)
+        }
+        isMonitoring = false
+        if clearEntries {
+            entryTimestamps.removeAll()
+            saveEntryTimestamps()
+        }
+        refreshStatusMessage()
+    }
+
+    private func refreshNotificationStatus() {
+        notificationService.authorizationStatus { [weak self] status in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.notificationAuthorizationStatus = status
+                self.refreshStatusMessage()
+            }
+        }
+    }
+
+    private func refreshStatusMessage() {
+        if !AppPreferences.trackingEnabled {
+            statusMessage = "Auto tracking is off"
+            return
+        }
+
+        if authorizationStatus == .denied || authorizationStatus == .restricted {
+            statusMessage = "Location permission is blocked"
+            return
+        }
+
+        if authorizationStatus != .authorizedAlways {
+            statusMessage = "Allow Always Location to auto-log in the background"
+            return
+        }
+
+        let enabledOfficeCount = officesProvider?().filter(\.isEnabled).count ?? 0
+        if enabledOfficeCount == 0 {
+            statusMessage = "Enable at least one office to start tracking"
+            return
+        }
+
+        if isMonitoring {
+            statusMessage = "Tracking is active for \(enabledOfficeCount) office\(enabledOfficeCount == 1 ? "" : "s")"
+        } else {
+            statusMessage = "Tracking is waiting to start"
+        }
+    }
+
+    private func evaluateEntryIfEligible(for officeName: String) {
+        guard let entryTime = entryTimestamps[officeName] else { return }
+        guard now().timeIntervalSince(entryTime) >= dwellTimeSeconds else { return }
+        logOfficeDayIfNeeded(officeName: officeName)
+    }
+
+    private func logOfficeDayIfNeeded(officeName: String) {
+        guard let context = modelContext else { return }
+        let today = Calendar.current.startOfDay(for: now())
+        let key = AttendanceDay.key(for: today)
+        var descriptor = FetchDescriptor<AttendanceDay>(
+            predicate: #Predicate { $0.dateKey == key }
+        )
+        descriptor.fetchLimit = 1
+
+        do {
+            let existing = try context.fetch(descriptor).first
+            if let existing, existing.dayType == .office {
+                clearEntryTimestamp(for: officeName)
+                return
+            }
+
+            if let existing, existing.isManualOverride {
+                clearEntryTimestamp(for: officeName)
+                return
+            }
+
+            if let existing {
+                existing.dayType = .office
+                existing.officeName = officeName
+                existing.holidayName = nil
+                existing.notes = nil
+                existing.isAutoLogged = true
+                existing.isManualOverride = false
+                existing.updatedAt = now()
+            } else {
+                let day = AttendanceDay(
+                    date: today,
+                    dayType: .office,
+                    officeName: officeName,
+                    isAutoLogged: true
+                )
+                context.insert(day)
+            }
+
+            try context.save()
+
+            lastCheckedInOffice = officeName
+            lastCheckInDate = now()
+            userDefaults.set(officeName, forKey: lastCheckInOfficeKey)
+            userDefaults.set(lastCheckInDate, forKey: lastCheckInDateKey)
+
+            notificationService.sendCheckInConfirmation(officeName: officeName) { [weak self] error in
+                DispatchQueue.main.async {
+                    if let error {
+                        self?.errorMessage = "Check-in notification failed: \(error.localizedDescription)"
+                    }
+                }
+            }
+
+            clearEntryTimestamp(for: officeName)
+            attendanceRefreshHandler?()
+            refreshStatusMessage()
+        } catch {
+            errorMessage = "Auto check-in failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func persistEntryTimestamp(_ date: Date, for officeName: String) {
+        entryTimestamps[officeName] = date
+        saveEntryTimestamps()
+    }
+
+    private func clearEntryTimestamp(for officeName: String) {
+        entryTimestamps.removeValue(forKey: officeName)
+        saveEntryTimestamps()
+    }
+
+    private func saveEntryTimestamps() {
+        let payload = entryTimestamps.mapValues { $0.timeIntervalSince1970 }
+        userDefaults.set(payload, forKey: entryTimestampsKey)
+    }
+
+    private static func loadEntryTimestamps(from userDefaults: UserDefaults, key: String) -> [String: Date] {
+        guard let stored = userDefaults.dictionary(forKey: key) as? [String: Double] else {
+            return [:]
+        }
+
+        return stored.reduce(into: [:]) { result, entry in
+            result[entry.key] = Date(timeIntervalSince1970: entry.value)
+        }
+    }
+}

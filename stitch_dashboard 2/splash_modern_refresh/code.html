@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#d3e4fe",
+              "on-tertiary-container": "#ffe1d6",
+              "on-secondary-fixed": "#001a41",
+              "surface-bright": "#f8f9ff",
+              "inverse-surface": "#213145",
+              "surface": "#f8f9ff",
+              "on-primary-container": "#dfe7ff",
+              "on-error": "#ffffff",
+              "primary-container": "#0064d2",
+              "on-tertiary-fixed": "#351000",
+              "secondary-container": "#b6ccfd",
+              "secondary": "#495e89",
+              "inverse-primary": "#adc6ff",
+              "surface-container-highest": "#d3e4fe",
+              "primary-fixed": "#d8e2ff",
+              "tertiary": "#8a3500",
+              "on-primary-fixed-variant": "#004493",
+              "on-tertiary-fixed-variant": "#7b2f00",
+              "tertiary-fixed-dim": "#ffb695",
+              "secondary-fixed": "#d8e2ff",
+              "on-secondary-fixed-variant": "#314670",
+              "on-error-container": "#93000a",
+              "secondary-fixed-dim": "#b1c7f7",
+              "outline-variant": "#c2c6d5",
+              "on-primary": "#ffffff",
+              "surface-container": "#e5eeff",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed": "#ffdbcc",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-container": "#b14600",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#405680",
+              "outline": "#727785",
+              "on-surface-variant": "#424753",
+              "surface-container-high": "#dce9ff",
+              "surface-container-low": "#eff4ff",
+              "inverse-on-surface": "#eaf1ff",
+              "surface-dim": "#cbdbf5",
+              "on-background": "#0b1c30",
+              "primary": "#004da4",
+              "on-primary-fixed": "#001a41",
+              "primary-fixed-dim": "#adc6ff",
+              "on-surface": "#0b1c30",
+              "on-secondary": "#ffffff",
+              "surface-tint": "#005bc0",
+              "error": "#ba1a1a",
+              "background": "#f8f9ff"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased overflow-hidden">
+<!-- Splash Screen Container -->
+<main class="relative min-h-screen flex flex-col items-center justify-between py-16 px-8 bg-surface">
+<!-- Architectural Breathing Zone Top -->
+<div class="flex-1 w-full flex items-center justify-center">
+<div class="flex flex-col items-center space-y-12">
+<!-- Brand Logo & Identity -->
+<div class="relative group">
+<!-- Subtle Glow Backdrop -->
+<div class="absolute -inset-8 bg-primary-container/5 blur-3xl rounded-full opacity-50"></div>
+<div class="relative flex flex-col items-center">
+<div class="w-32 h-32 md:w-40 md:h-40 flex items-center justify-center mb-8">
+<img alt="My Office Days modern building logo" class="w-full h-full object-contain" data-alt="Modern architectural building icon with clean geometric lines in a vibrant blue tech style on a pure white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFevanh3qhirG49znoSHGjDM3siCD62fyoZ6qbeusdU8HLtSh3RL5AtTg4jsgwLgC_cKQtHjPTdVDtTiNWcgg1DXMge5-KAKoL8_4RCWIDG_-rtL64jONGxp03zQWqS7djvUM_EG6B-JvTsOx_ooB25cQxJKhPrldB5hlknRTxCT59Z5BVvB10_VTC1Ve3bmbTroFD3ybaUo8d4keCUs4084uc5ucc1yEX7QduG36SYoSmKrv7bqSiDfnAUfLZ7E18b1yLi0hV5_6e"/>
+</div>
+<h1 class="font-headline font-extrabold text-4xl md:text-5xl tracking-tight bg-gradient-to-br from-primary to-primary-container bg-clip-text text-transparent">
+                            My Office Days
+                        </h1>
+<p class="mt-4 font-label text-sm tracking-[0.2em] text-on-surface-variant font-semibold uppercase">
+                            Workspace Management
+                        </p>
+</div>
+</div>
+<!-- Interaction Hint / Loading State -->
+<div class="flex items-center space-x-2">
+<div class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse [animation-delay:200ms]"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse [animation-delay:400ms]"></div>
+</div>
+</div>
+</div>
+<!-- Footer Information: Architectural Ledger Style -->
+<div class="w-full max-w-md space-y-8 text-center">
+<!-- Security Badge Container -->
+<div class="inline-flex items-center px-5 py-2.5 rounded-full bg-surface-container-low text-on-secondary-container">
+<span class="material-symbols-outlined text-[20px] mr-2" style="font-variation-settings: 'FILL' 1;">
+                    shield_lock
+                </span>
+<span class="font-label text-xs font-semibold tracking-wide">
+                    Data is secure and stored locally
+                </span>
+</div>
+<!-- Versioning & System Info -->
+<div class="flex flex-col items-center space-y-2">
+<div class="w-8 h-[1px] bg-outline-variant/30 mb-2"></div>
+<div class="flex items-center space-x-4">
+<span class="font-label text-[10px] text-on-surface-variant/60 tracking-widest uppercase font-bold">
+                        v2.4.0-STABLE
+                    </span>
+</div>
+</div>
+</div>
+<!-- Background Tonal Shifts (Architectural Planes) -->
+<div class="absolute top-0 right-0 w-1/3 h-1/3 bg-surface-container-low/40 rounded-bl-[120px] -z-10"></div>
+<div class="absolute bottom-0 left-0 w-1/4 h-1/4 bg-surface-container/30 rounded-tr-[80px] -z-10"></div>
+</main>
+<!-- Suppressed Navigation Shell for Focused Task (Splash Screen) -->
+<!-- Rule: The Splash Screen is a task-focused entry point, so global navigation is suppressed. -->
+</body></html>

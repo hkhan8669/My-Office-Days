@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Office Days - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#3a5f94",
+              "tertiary-container": "#592300",
+              "inverse-primary": "#a7c8ff",
+              "error-container": "#ffdad6",
+              "tertiary-fixed-dim": "#ffb690",
+              "surface-container-low": "#f2f4f6",
+              "surface-container-high": "#e6e8ea",
+              "surface": "#f8f9fb",
+              "surface-bright": "#f8f9fb",
+              "on-surface": "#191c1e",
+              "surface-container-highest": "#e0e3e5",
+              "surface-container": "#eceef0",
+              "primary-fixed-dim": "#a7c8ff",
+              "primary-container": "#003366",
+              "secondary-fixed-dim": "#b4cad6",
+              "on-secondary": "#ffffff",
+              "secondary": "#4c616c",
+              "primary-fixed": "#d5e3ff",
+              "outline-variant": "#c3c6d1",
+              "on-secondary-container": "#526772",
+              "background": "#f8f9fb",
+              "on-primary-container": "#799dd6",
+              "surface-variant": "#e0e3e5",
+              "secondary-fixed": "#cfe6f2",
+              "primary": "#001e40",
+              "inverse-on-surface": "#eff1f3",
+              "surface-container-lowest": "#ffffff",
+              "secondary-container": "#cfe6f2",
+              "on-primary-fixed": "#001b3c",
+              "on-tertiary-fixed": "#341100",
+              "on-tertiary-fixed-variant": "#723610",
+              "on-secondary-fixed": "#071e27",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-container": "#d8885c",
+              "on-error": "#ffffff",
+              "on-error-container": "#93000a",
+              "surface-dim": "#d8dadc",
+              "tertiary": "#381300",
+              "on-secondary-fixed-variant": "#354a53",
+              "outline": "#737780",
+              "on-primary-fixed-variant": "#1f477b",
+              "on-surface-variant": "#43474f",
+              "inverse-surface": "#2d3133",
+              "tertiary-fixed": "#ffdbca",
+              "on-primary": "#ffffff",
+              "on-background": "#191c1e",
+              "error": "#ba1a1a"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .circular-progress {
+            background: radial-gradient(closest-side, white 79%, transparent 80% 100%),
+                        conic-gradient(#0064D2 61.5%, #eceef0 0);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-white dark:bg-slate-900 sticky top-0 z-50 flex justify-between items-center w-full px-6 py-4 max-w-none">
+<div class="text-xl font-black text-[#0064D2] dark:text-blue-400 flex items-center gap-2 font-['Inter'] tracking-tight">
+<span class="material-symbols-outlined" style="font-size: 28px;">corporate_fare</span>
+            My Office Days
+        </div>
+<div class="hidden md:flex gap-8">
+<a class="text-[#0064D2] dark:text-blue-400 font-bold font-['Inter']" href="#">Dashboard</a>
+<a class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-['Inter']" href="#">Plan</a>
+<a class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-['Inter']" href="#">Insights</a>
+<a class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-['Inter']" href="#">Setup</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-500">account_circle</span>
+</div>
+</header>
+<main class="max-w-5xl mx-auto px-6 pt-12">
+<!-- Dashboard Hero: Asymmetric Grid -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-0 border-l border-outline-variant/15">
+<!-- Left Side: Circular Progress & Identity -->
+<div class="md:col-span-7 bg-surface-container-lowest p-10 flex flex-col items-center justify-center border-b md:border-b-0 border-outline-variant/15">
+<div class="relative w-64 h-64 md:w-80 md:h-80 flex items-center justify-center">
+<div class="circular-progress w-full h-full rounded-full flex items-center justify-center">
+<div class="text-center">
+<div class="text-sm font-label uppercase tracking-[0.2em] text-secondary mb-1">Quarter Progress</div>
+<div class="text-5xl md:text-6xl font-black text-primary tracking-tighter">24 <span class="text-on-primary-container">/ 39</span></div>
+<div class="text-sm font-label uppercase tracking-[0.1em] text-secondary mt-1">DAYS</div>
+</div>
+</div>
+</div>
+<div class="mt-12 text-center w-full max-w-sm">
+<div class="h-px w-12 bg-primary mx-auto mb-6"></div>
+<p class="text-label-md uppercase tracking-widest text-secondary font-medium mb-2">Current Status</p>
+<h2 class="text-2xl font-bold text-primary mb-8">In Office at Headquarters</h2>
+<button class="w-full bg-primary text-white py-4 px-8 font-label text-sm font-bold uppercase tracking-widest hover:bg-[#003366] transition-all active:scale-95 duration-150 ease-in-out">
+                        LOG STATUS CHANGE
+                    </button>
+</div>
+</div>
+<!-- Right Side: Ledger Data & Stats -->
+<div class="md:col-span-5 flex flex-col">
+<!-- Stat Block 1 -->
+<div class="bg-surface-container-low p-10 flex-1 border-b border-outline-variant/15">
+<span class="material-symbols-outlined text-[#0064D2] mb-4" style="font-size: 32px;">event_repeat</span>
+<p class="text-sm font-label uppercase tracking-widest text-secondary mb-1">Threshold Goal</p>
+<h3 class="text-4xl font-bold text-primary">15 Days Remaining</h3>
+<p class="text-sm text-on-surface-variant mt-4 leading-relaxed">You have completed 62% of your mandatory office attendance for the current fiscal quarter.</p>
+</div>
+<!-- Stat Block 2 -->
+<div class="bg-surface-container p-10 flex-1">
+<span class="material-symbols-outlined text-[#0064D2] mb-4" style="font-size: 32px;">work_history</span>
+<p class="text-sm font-label uppercase tracking-widest text-secondary mb-1">Quarter Capacity</p>
+<h3 class="text-4xl font-bold text-primary">22 Work Days Left</h3>
+<p class="text-sm text-on-surface-variant mt-4 leading-relaxed">Based on the remaining calendar days excluding weekends and regional holidays.</p>
+</div>
+</div>
+</div>
+<!-- Ledger Data Table Section -->
+<section class="mt-20 mb-12">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h4 class="text-3xl font-bold text-primary tracking-tight">Recent Activity</h4>
+<p class="text-secondary uppercase tracking-widest text-[10px] mt-1">Verified office logs and remote sessions</p>
+</div>
+<div class="text-[#0064D2] font-bold text-sm cursor-pointer hover:underline">View Detailed Ledger</div>
+</div>
+<div class="bg-surface-container-low">
+<!-- Table Header -->
+<div class="grid grid-cols-4 bg-surface-container-highest px-6 py-3">
+<div class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">Date</div>
+<div class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">Location</div>
+<div class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">Duration</div>
+<div class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant text-right">Verification</div>
+</div>
+<!-- Rows -->
+<div class="grid grid-cols-4 px-6 py-5 border-b border-outline-variant/10 bg-surface-container-lowest">
+<div class="text-sm font-medium">Oct 24, 2023</div>
+<div class="text-sm flex items-center gap-2">
+<span class="w-2 h-2 bg-[#0064D2]"></span> Headquarters
+                    </div>
+<div class="text-sm text-secondary">08:45 AM - 05:15 PM</div>
+<div class="text-xs font-bold text-[#0064D2] text-right uppercase tracking-tighter">Verified Badge</div>
+</div>
+<div class="grid grid-cols-4 px-6 py-5 border-b border-outline-variant/10 bg-surface">
+<div class="text-sm font-medium">Oct 23, 2023</div>
+<div class="text-sm flex items-center gap-2">
+<span class="w-2 h-2 bg-slate-400"></span> Remote Session
+                    </div>
+<div class="text-sm text-secondary">09:00 AM - 06:00 PM</div>
+<div class="text-xs font-bold text-slate-400 text-right uppercase tracking-tighter">System Log</div>
+</div>
+<div class="grid grid-cols-4 px-6 py-5 bg-surface-container-lowest">
+<div class="text-sm font-medium">Oct 22, 2023</div>
+<div class="text-sm flex items-center gap-2">
+<span class="w-2 h-2 bg-[#0064D2]"></span> Headquarters
+                    </div>
+<div class="text-sm text-secondary">08:30 AM - 04:45 PM</div>
+<div class="text-xs font-bold text-[#0064D2] text-right uppercase tracking-tighter">Verified Badge</div>
+</div>
+</div>
+</section>
+<!-- Bento Information Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+<div class="bg-surface-container-lowest p-8 border-l-4 border-[#0064D2]">
+<h5 class="font-bold text-lg mb-2">Upcoming Buffer</h5>
+<p class="text-sm text-secondary leading-relaxed">You have 3 personal leave days scheduled next month which may impact your quota.</p>
+</div>
+<div class="bg-surface-container-low p-8">
+<h5 class="font-bold text-lg mb-2">Policy Update</h5>
+<p class="text-sm text-secondary leading-relaxed">Q4 minimum attendance remains at 60% for all Headquarters-based departments.</p>
+</div>
+<div class="relative group cursor-pointer overflow-hidden">
+<div class="absolute inset-0 bg-primary/20 group-hover:bg-primary/10 transition-colors z-10"></div>
+<img alt="Office View" class="w-full h-full object-cover grayscale" data-alt="modern brutalist architecture office interior with clean lines and large glass windows overlooking a city skyline" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2kFgkiUDQoqlGRRK9gtjEDb8Tz_EJh-6CVEPULTPhxcRbkNknq7K3rpH9KImTFDPRs21fM_a58TWGMwd1kVDkJbWPAcCPYeAruU8nmlHl4_mI8A7UAfQIHtTLtogg_PeVtDiB1v0K2EBbOfXmrbbQvZNObYKv4VeyzLSKHiPcwjKG0nz5M1THI2HTZSBMVqfX5nGCeWs7YPafJ-Tf5w0VMqsQhPzRWstJXhUxN8qkwL977tWoI1A9gmRKq6izPZWMLrere6dAstO4"/>
+<div class="absolute bottom-6 left-6 z-20">
+<p class="text-white font-bold uppercase tracking-widest text-xs">Explore Locations</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-white dark:bg-slate-900 px-4 h-16 border-t border-slate-100 dark:border-slate-800">
+<a class="flex flex-col items-center justify-center text-[#0064D2] dark:text-blue-400 border-t-2 border-[#0064D2] pt-2 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 hover:text-[#0064D2] dark:hover:text-blue-300 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Plan</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 hover:text-[#0064D2] dark:hover:text-blue-300 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Insights</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 hover:text-[#0064D2] dark:hover:text-blue-300 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Setup</span>
+</a>
+</nav>
+</body></html>

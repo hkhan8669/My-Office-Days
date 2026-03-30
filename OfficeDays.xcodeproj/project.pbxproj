@@ -1,0 +1,365 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C24FEE6D8D4A203A24DA6A81 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DC931607B20166C2FA8C642 /* ContentView.swift */; };
+		9E9C5D4EA6FFD22F56EE68EA /* AttendanceDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C48AA0CEA8FA8B85F1F361 /* AttendanceDay.swift */; };
+		7AD55EBD1259EC20281C9DF4 /* DayType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC3BC28661D303CC14927D7 /* DayType.swift */; };
+		4D8A465B079A37030B2EDA8D /* Holiday.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AFECB20C7E2CFDE462644B /* Holiday.swift */; };
+		FF7503F320C9CD884DC76A31 /* OfficeLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29915F53568A6A2AD6F9FB74 /* OfficeLocation.swift */; };
+		BDF75099D5E356E621F2DE40 /* OfficeDaysApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3476F784390F8566DA1E03B7 /* OfficeDaysApp.swift */; };
+		E64E42E6C7466FE3A0DDC8A4 /* GeofenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7113ABD01AFAB7C55C558B /* GeofenceService.swift */; };
+		7407459F4E5025974922D93B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4461A756D8525E82A1102C0 /* NotificationService.swift */; };
+		AC2EB3F2DFF6E5469C54B771 /* DateHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2FF08EAF7972E8C0F42BB0 /* DateHelper.swift */; };
+		72F63DB22D8B44C71E721F4D /* QuarterHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F201039CF0E866CABD4678B1 /* QuarterHelper.swift */; };
+		1369186B1519E0B0A5AE91C5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B771108F2C75E79ED52C7AC /* Theme.swift */; };
+		6009600218F82B7A57E2C4CF /* AttendanceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF5F7A238CBB935D34267A8B /* AttendanceViewModel.swift */; };
+		1F3EBD72BF4F34C154B72772 /* CalendarTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22D302997AC6A7CFFE5FA6C4 /* CalendarTabView.swift */; };
+		2DBBF95CB8C3C84F4CA58C28 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22708B0095A68599A02018EB /* DashboardView.swift */; };
+		14BFEF618B4DF11B11DD773B /* DayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93947A0C2AABCDDB321D125 /* DayDetailView.swift */; };
+		8E5F1F6C97421BF9BC15EDAC /* QuarterSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E5FE94F7C3BE59A4467484 /* QuarterSummaryView.swift */; };
+		E3C31FE4DA724EAD31FC545F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE424491C5DC36093503EE8 /* SettingsView.swift */; };
+		AA1234560001000000000001 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1234560002000000000001 /* SplashView.swift */; };
+		AA1234560001000000000002 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1234560002000000000002 /* InsightsView.swift */; };
+		BB0000000001000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB0000000002000000000001 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		7DC931607B20166C2FA8C642 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView.swift"; sourceTree = "<group>"; name = "ContentView.swift"; };
+		94C48AA0CEA8FA8B85F1F361 /* AttendanceDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AttendanceDay.swift"; sourceTree = "<group>"; name = "AttendanceDay.swift"; };
+		3AC3BC28661D303CC14927D7 /* DayType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DayType.swift"; sourceTree = "<group>"; name = "DayType.swift"; };
+		11AFECB20C7E2CFDE462644B /* Holiday.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Holiday.swift"; sourceTree = "<group>"; name = "Holiday.swift"; };
+		29915F53568A6A2AD6F9FB74 /* OfficeLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OfficeLocation.swift"; sourceTree = "<group>"; name = "OfficeLocation.swift"; };
+		AA1234560002000000000001 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SplashView.swift"; sourceTree = "<group>"; name = "SplashView.swift"; };
+		AA1234560002000000000002 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InsightsView.swift"; sourceTree = "<group>"; name = "InsightsView.swift"; };
+		3476F784390F8566DA1E03B7 /* OfficeDaysApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OfficeDaysApp.swift"; sourceTree = "<group>"; name = "OfficeDaysApp.swift"; };
+		FC7113ABD01AFAB7C55C558B /* GeofenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GeofenceService.swift"; sourceTree = "<group>"; name = "GeofenceService.swift"; };
+		A4461A756D8525E82A1102C0 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NotificationService.swift"; sourceTree = "<group>"; name = "NotificationService.swift"; };
+		9B2FF08EAF7972E8C0F42BB0 /* DateHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DateHelper.swift"; sourceTree = "<group>"; name = "DateHelper.swift"; };
+		F201039CF0E866CABD4678B1 /* QuarterHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QuarterHelper.swift"; sourceTree = "<group>"; name = "QuarterHelper.swift"; };
+		0B771108F2C75E79ED52C7AC /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme.swift"; sourceTree = "<group>"; name = "Theme.swift"; };
+		EF5F7A238CBB935D34267A8B /* AttendanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AttendanceViewModel.swift"; sourceTree = "<group>"; name = "AttendanceViewModel.swift"; };
+		22D302997AC6A7CFFE5FA6C4 /* CalendarTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CalendarTabView.swift"; sourceTree = "<group>"; name = "CalendarTabView.swift"; };
+		22708B0095A68599A02018EB /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DashboardView.swift"; sourceTree = "<group>"; name = "DashboardView.swift"; };
+		D93947A0C2AABCDDB321D125 /* DayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DayDetailView.swift"; sourceTree = "<group>"; name = "DayDetailView.swift"; };
+		E5E5FE94F7C3BE59A4467484 /* QuarterSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QuarterSummaryView.swift"; sourceTree = "<group>"; name = "QuarterSummaryView.swift"; };
+		AEE424491C5DC36093503EE8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; name = "SettingsView.swift"; };
+		CBC1A6187DDFEBB71FC440A0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A97C29AD63741CF438998CE6 /* OfficeDays.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OfficeDays.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0000000002000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>"; name = "Assets.xcassets"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		71D2E56247FE75C3DCE9B609 = {
+			isa = PBXGroup;
+			children = (
+				2E8E9E2729556B06D839B62D /* OfficeDays */,
+				9A76A62D587AD0C58292763F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2E8E9E2729556B06D839B62D /* OfficeDays */ = {
+			isa = PBXGroup;
+			children = (
+				7DC931607B20166C2FA8C642 /* ContentView.swift */,
+				3476F784390F8566DA1E03B7 /* OfficeDaysApp.swift */,
+				CBC1A6187DDFEBB71FC440A0 /* Info.plist */,
+				BB0000000002000000000001 /* Assets.xcassets */,
+				9CF43B31E8845D861542A38E /* Models */,
+				C454586A1F4E28C340BDC1AD /* Views */,
+				420CEB417186B52ECF642348 /* ViewModels */,
+				564EAF51B7DD4639ADD9B985 /* Services */,
+				10E0CBB3D5907D4020F06435 /* Utils */,
+			);
+			path = OfficeDays;
+			sourceTree = "<group>";
+		};
+		9CF43B31E8845D861542A38E /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				94C48AA0CEA8FA8B85F1F361 /* AttendanceDay.swift */,
+				3AC3BC28661D303CC14927D7 /* DayType.swift */,
+				11AFECB20C7E2CFDE462644B /* Holiday.swift */,
+				29915F53568A6A2AD6F9FB74 /* OfficeLocation.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C454586A1F4E28C340BDC1AD /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				22D302997AC6A7CFFE5FA6C4 /* CalendarTabView.swift */,
+				22708B0095A68599A02018EB /* DashboardView.swift */,
+				D93947A0C2AABCDDB321D125 /* DayDetailView.swift */,
+				E5E5FE94F7C3BE59A4467484 /* QuarterSummaryView.swift */,
+				AEE424491C5DC36093503EE8 /* SettingsView.swift */,
+				AA1234560002000000000001 /* SplashView.swift */,
+				AA1234560002000000000002 /* InsightsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		420CEB417186B52ECF642348 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				EF5F7A238CBB935D34267A8B /* AttendanceViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		564EAF51B7DD4639ADD9B985 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				FC7113ABD01AFAB7C55C558B /* GeofenceService.swift */,
+				A4461A756D8525E82A1102C0 /* NotificationService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		10E0CBB3D5907D4020F06435 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				9B2FF08EAF7972E8C0F42BB0 /* DateHelper.swift */,
+				F201039CF0E866CABD4678B1 /* QuarterHelper.swift */,
+				0B771108F2C75E79ED52C7AC /* Theme.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		9A76A62D587AD0C58292763F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A97C29AD63741CF438998CE6 /* OfficeDays.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		42AEFBAE01D2DFD981F7DA7D /* OfficeDays */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AFD04581184175117C78D9AC /* Build configuration list for PBXNativeTarget "OfficeDays" */;
+			buildPhases = (
+				994D11E79DA49A586E0A1D24 /* Sources */,
+				29B2D46AA747A59804D46E1F /* Frameworks */,
+				66F8606E9F0A136E2228EBCB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OfficeDays;
+			productName = OfficeDays;
+			productReference = A97C29AD63741CF438998CE6 /* OfficeDays.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		46F86FAA6BBF9AC94A7E4595 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 022E0F2E8ECAC35F5510DD6F /* Build configuration list for PBXProject "OfficeDays" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 71D2E56247FE75C3DCE9B609;
+			productRefGroup = 9A76A62D587AD0C58292763F /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				42AEFBAE01D2DFD981F7DA7D /* OfficeDays */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		66F8606E9F0A136E2228EBCB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000001000000000001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		994D11E79DA49A586E0A1D24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C24FEE6D8D4A203A24DA6A81 /* ContentView.swift in Sources */,
+				9E9C5D4EA6FFD22F56EE68EA /* AttendanceDay.swift in Sources */,
+				7AD55EBD1259EC20281C9DF4 /* DayType.swift in Sources */,
+				4D8A465B079A37030B2EDA8D /* Holiday.swift in Sources */,
+				FF7503F320C9CD884DC76A31 /* OfficeLocation.swift in Sources */,
+				BDF75099D5E356E621F2DE40 /* OfficeDaysApp.swift in Sources */,
+				E64E42E6C7466FE3A0DDC8A4 /* GeofenceService.swift in Sources */,
+				7407459F4E5025974922D93B /* NotificationService.swift in Sources */,
+				AC2EB3F2DFF6E5469C54B771 /* DateHelper.swift in Sources */,
+				72F63DB22D8B44C71E721F4D /* QuarterHelper.swift in Sources */,
+				1369186B1519E0B0A5AE91C5 /* Theme.swift in Sources */,
+				6009600218F82B7A57E2C4CF /* AttendanceViewModel.swift in Sources */,
+				1F3EBD72BF4F34C154B72772 /* CalendarTabView.swift in Sources */,
+				2DBBF95CB8C3C84F4CA58C28 /* DashboardView.swift in Sources */,
+				14BFEF618B4DF11B11DD773B /* DayDetailView.swift in Sources */,
+				8E5F1F6C97421BF9BC15EDAC /* QuarterSummaryView.swift in Sources */,
+				E3C31FE4DA724EAD31FC545F /* SettingsView.swift in Sources */,
+				AA1234560001000000000001 /* SplashView.swift in Sources */,
+				AA1234560001000000000002 /* InsightsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		29B2D46AA747A59804D46E1F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AAEA14000790462964F89243 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		555260E2B9879D6B41B034DF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		386F21FB6CCFBF3FBFDA1CC3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OfficeDays/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "My Office Days";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.officedays.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		99EA497894306B9F39FE5709 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OfficeDays/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "My Office Days";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.officedays.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		022E0F2E8ECAC35F5510DD6F /* Build configuration list for PBXProject "OfficeDays" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAEA14000790462964F89243 /* Debug */,
+				555260E2B9879D6B41B034DF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AFD04581184175117C78D9AC /* Build configuration list for PBXNativeTarget "OfficeDays" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				386F21FB6CCFBF3FBFDA1CC3 /* Debug */,
+				99EA497894306B9F39FE5709 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 46F86FAA6BBF9AC94A7E4595 /* Project object */;
+}

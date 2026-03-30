@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Office Days - March 2026</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#3a5f94",
+              "tertiary-container": "#592300",
+              "inverse-primary": "#a7c8ff",
+              "error-container": "#ffdad6",
+              "tertiary-fixed-dim": "#ffb690",
+              "surface-container-low": "#f2f4f6",
+              "surface-container-high": "#e6e8ea",
+              "surface": "#f8f9fb",
+              "surface-bright": "#f8f9fb",
+              "on-surface": "#191c1e",
+              "surface-container-highest": "#e0e3e5",
+              "surface-container": "#eceef0",
+              "primary-fixed-dim": "#a7c8ff",
+              "primary-container": "#003366",
+              "secondary-fixed-dim": "#b4cad6",
+              "on-secondary": "#ffffff",
+              "secondary": "#4c616c",
+              "primary-fixed": "#d5e3ff",
+              "outline-variant": "#c3c6d1",
+              "on-secondary-container": "#526772",
+              "background": "#f8f9fb",
+              "on-primary-container": "#799dd6",
+              "surface-variant": "#e0e3e5",
+              "secondary-fixed": "#cfe6f2",
+              "primary": "#001e40",
+              "inverse-on-surface": "#eff1f3",
+              "surface-container-lowest": "#ffffff",
+              "secondary-container": "#cfe6f2",
+              "on-primary-fixed": "#001b3c",
+              "on-tertiary-fixed": "#341100",
+              "on-tertiary-fixed-variant": "#723610",
+              "on-secondary-fixed": "#071e27",
+              "on-tertiary": "#ffffff",
+              "on-tertiary-container": "#d8885c",
+              "on-error": "#ffffff",
+              "on-error-container": "#93000a",
+              "surface-dim": "#d8dadc",
+              "tertiary": "#381300",
+              "on-secondary-fixed-variant": "#354a53",
+              "outline": "#737780",
+              "on-primary-fixed-variant": "#1f477b",
+              "on-surface-variant": "#43474f",
+              "inverse-surface": "#2d3133",
+              "tertiary-fixed": "#ffdbca",
+              "on-primary": "#ffffff",
+              "on-background": "#191c1e",
+              "error": "#ba1a1a"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-white dark:bg-slate-900 flex justify-between items-center w-full px-6 py-4 max-w-none sticky top-0 z-50">
+<div class="text-xl font-black text-[#0064D2] dark:text-blue-400 flex items-center gap-2 font-['Inter'] tracking-tight">
+<span class="material-symbols-outlined">corporate_fare</span>
+<span>My Office Days</span>
+</div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-slate-500 dark:text-slate-400 font-['Inter'] text-[11px] font-medium uppercase tracking-wider hover:text-[#0064D2] transition-colors" href="#">Dashboard</a>
+<a class="text-[#0064D2] dark:text-blue-400 font-bold font-['Inter'] text-[11px] uppercase tracking-wider" href="#">Plan</a>
+<a class="text-slate-500 dark:text-slate-400 font-['Inter'] text-[11px] font-medium uppercase tracking-wider hover:text-[#0064D2] transition-colors" href="#">Insights</a>
+<a class="text-slate-500 dark:text-slate-400 font-['Inter'] text-[11px] font-medium uppercase tracking-wider hover:text-[#0064D2] transition-colors" href="#">Setup</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-100 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+</button>
+<button class="p-2 hover:bg-slate-100 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-6 pt-8">
+<!-- Monthly Header & Controls -->
+<div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4 border-l-4 border-primary-container pl-6">
+<div>
+<p class="text-label-sm uppercase tracking-widest text-on-surface-variant font-bold mb-1">Architectural Ledger</p>
+<h1 class="text-4xl font-extrabold tracking-tighter text-primary">March 2026</h1>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-low p-1">
+<button class="p-3 bg-surface-container-lowest hover:bg-white transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="px-6 py-3 bg-primary text-white font-bold uppercase text-xs tracking-widest">
+                    Today
+                </button>
+<button class="p-3 bg-surface-container-lowest hover:bg-white transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Ledger Calendar Grid -->
+<div class="grid grid-cols-7 gap-px bg-outline-variant bg-opacity-15 shadow-sm overflow-hidden">
+<!-- Day Headers -->
+<div class="bg-surface-container-highest p-4 text-center">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Mon</span>
+</div>
+<div class="bg-surface-container-highest p-4 text-center">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Tue</span>
+</div>
+<div class="bg-surface-container-highest p-4 text-center">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Wed</span>
+</div>
+<div class="bg-surface-container-highest p-4 text-center">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Thu</span>
+</div>
+<div class="bg-surface-container-highest p-4 text-center">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Fri</span>
+</div>
+<div class="bg-surface-container-highest p-4 text-center">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Sat</span>
+</div>
+<div class="bg-surface-container-highest p-4 text-center">
+<span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Sun</span>
+</div>
+<!-- Calendar Row 1 -->
+<div class="bg-surface-container-low min-h-[140px] p-4 text-slate-300 opacity-40">23</div>
+<div class="bg-surface-container-low min-h-[140px] p-4 text-slate-300 opacity-40">24</div>
+<div class="bg-surface-container-low min-h-[140px] p-4 text-slate-300 opacity-40">25</div>
+<div class="bg-surface-container-low min-h-[140px] p-4 text-slate-300 opacity-40">26</div>
+<div class="bg-surface-container-low min-h-[140px] p-4 text-slate-300 opacity-40">27</div>
+<div class="bg-surface-container-low min-h-[140px] p-4 text-slate-300 opacity-40">28</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">01</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center border-2 border-primary-container text-primary-container font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">02</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-container text-white font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">03</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-container text-white font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">04</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#8B5CF6] text-white font-black text-xl rounded-full">H</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">05</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-container text-white font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">06</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center border-2 border-primary-container text-primary-container font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">07</span>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">08</span>
+</div>
+<!-- Row 3 -->
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">09</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#10B981] text-white font-black text-xl rounded-full">V</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">10</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#10B981] text-white font-black text-xl rounded-full">V</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">11</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#10B981] text-white font-black text-xl rounded-full">V</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">12</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#10B981] text-white font-black text-xl rounded-full">V</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">13</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#10B981] text-white font-black text-xl rounded-full">V</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">14</span>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">15</span>
+</div>
+<!-- Row 4 (Planned Days - Prominent) -->
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end outline outline-1 outline-primary-container outline-offset-[-4px] z-10">
+<span class="text-on-surface-variant font-bold p-2">16</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#F59E0B] text-white font-black text-xl rounded-full">P</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end outline outline-1 outline-primary-container outline-offset-[-4px] z-10">
+<span class="text-on-surface-variant font-bold p-2">17</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#F59E0B] text-white font-black text-xl rounded-full">P</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">18</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-container text-white font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">19</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center border-2 border-primary-container text-primary-container font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end outline outline-1 outline-primary-container outline-offset-[-4px] z-10">
+<span class="text-on-surface-variant font-bold p-2">20</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#F59E0B] text-white font-black text-xl rounded-full">P</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">21</span>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">22</span>
+</div>
+<!-- Row 5 -->
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">23</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center border-2 border-primary-container text-primary-container font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">24</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-container text-white font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end outline outline-1 outline-primary-container outline-offset-[-4px] z-10">
+<span class="text-on-surface-variant font-bold p-2">25</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#F59E0B] text-white font-black text-xl rounded-full">P</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">26</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-container text-white font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end outline outline-1 outline-primary-container outline-offset-[-4px] z-10">
+<span class="text-on-surface-variant font-bold p-2">27</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-[#F59E0B] text-white font-black text-xl rounded-full">P</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">28</span>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">29</span>
+</div>
+<!-- Row 6 -->
+<div class="bg-surface-container-lowest min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">30</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-container text-white font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-low min-h-[140px] p-2 flex flex-col items-end">
+<span class="text-on-surface-variant font-bold p-2">31</span>
+<div class="mt-auto w-full flex justify-center pb-4">
+<div class="w-12 h-12 flex items-center justify-center border-2 border-primary-container text-primary-container font-black text-xl rounded-full">O</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-4 text-slate-300 opacity-40">01</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-4 text-slate-300 opacity-40">02</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-4 text-slate-300 opacity-40">03</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-4 text-slate-300 opacity-40">04</div>
+<div class="bg-surface-container-lowest min-h-[140px] p-4 text-slate-300 opacity-40">05</div>
+</div>
+<!-- Legend -->
+<div class="mt-12 bg-surface-container-low p-8">
+<h3 class="text-label-md font-black uppercase tracking-[0.1em] text-primary mb-6">Status Ledger Legend</h3>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-primary-container text-white font-black rounded-full">O</div>
+<div>
+<p class="text-xs font-black uppercase tracking-wider text-on-surface">Office Day</p>
+<p class="text-xs text-on-surface-variant">Standard in-person work day</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#F59E0B] text-white font-black rounded-full">P</div>
+<div>
+<p class="text-xs font-black uppercase tracking-wider text-on-surface">Planned</p>
+<p class="text-xs text-on-surface-variant">Scheduled for future review</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#10B981] text-white font-black rounded-full">V</div>
+<div>
+<p class="text-xs font-black uppercase tracking-wider text-on-surface">Vacation</p>
+<p class="text-xs text-on-surface-variant">Approved leave of absence</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#8B5CF6] text-white font-black rounded-full">H</div>
+<div>
+<p class="text-xs font-black uppercase tracking-wider text-on-surface">Holiday</p>
+<p class="text-xs text-on-surface-variant">Company or national holiday</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-white dark:bg-slate-900 px-4 h-16 border-t border-slate-100 dark:border-slate-800">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 transition-all duration-200 hover:text-[#0064D2]" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#0064D2] dark:text-blue-400 border-t-2 border-[#0064D2] pt-2 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider mt-1">Plan</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 transition-all duration-200 hover:text-[#0064D2]" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider mt-1">Insights</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 transition-all duration-200 hover:text-[#0064D2]" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider mt-1">Setup</span>
+</a>
+</nav>
+<!-- FAB (Suppressed on Details/Cal, but contextually relevant here for "Add Event") -->
+<button class="fixed right-8 bottom-24 bg-primary text-white w-14 h-14 flex items-center justify-center shadow-2xl transition-transform active:scale-95 group">
+<span class="material-symbols-outlined group-hover:rotate-90 transition-transform">add</span>
+</button>
+</body></html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Activity History - My Office Days</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-tint": "#3a5f94",
+                        "tertiary-container": "#592300",
+                        "inverse-primary": "#a7c8ff",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#ffb690",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "surface": "#f8f9fb",
+                        "surface-bright": "#f8f9fb",
+                        "on-surface": "#191c1e",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "primary-fixed-dim": "#a7c8ff",
+                        "primary-container": "#003366",
+                        "secondary-fixed-dim": "#b4cad6",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#4c616c",
+                        "primary-fixed": "#d5e3ff",
+                        "outline-variant": "#c3c6d1",
+                        "on-secondary-container": "#526772",
+                        "background": "#f8f9fb",
+                        "on-primary-container": "#799dd6",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed": "#cfe6f2",
+                        "primary": "#001e40",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#cfe6f2",
+                        "on-primary-fixed": "#001b3c",
+                        "on-tertiary-fixed": "#341100",
+                        "on-tertiary-fixed-variant": "#723610",
+                        "on-secondary-fixed": "#071e27",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#d8885c",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#d8dadc",
+                        "tertiary": "#381300",
+                        "on-secondary-fixed-variant": "#354a53",
+                        "outline": "#737780",
+                        "on-primary-fixed-variant": "#1f477b",
+                        "on-surface-variant": "#43474f",
+                        "inverse-surface": "#2d3133",
+                        "tertiary-fixed": "#ffdbca",
+                        "on-primary": "#ffffff",
+                        "on-background": "#191c1e",
+                        "error": "#ba1a1a"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .ledger-row:nth-child(even) { background-color: #f2f4f6; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-24">
+<!-- TopAppBar Component -->
+<header class="bg-white dark:bg-slate-900 flex justify-between items-center w-full px-6 py-4 max-w-none sticky top-0 z-50">
+<div class="text-xl font-black text-[#0064D2] dark:text-blue-400 flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="corporate_fare">corporate_fare</span>
+<span class="font-['Inter'] font-bold tracking-tight text-on-surface">My Office Days</span>
+</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#0064D2] transition-colors" href="#">Dashboard</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#0064D2] transition-colors" href="#">Plan</a>
+<a class="text-[#0064D2] dark:text-blue-400 font-bold" href="#">Insights</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-[#0064D2] transition-colors" href="#">Setup</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-10 h-10 bg-primary-container flex items-center justify-center text-on-primary-container font-bold">
+                JD
+            </div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-6 py-12">
+<!-- Hero Section / Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12 border-l-4 border-primary-container pl-6">
+<div>
+<p class="font-['Inter'] text-[11px] font-medium uppercase tracking-widest text-secondary mb-2">Audit Logs</p>
+<h1 class="text-4xl md:text-5xl font-black tracking-tight text-primary leading-none">Activity History</h1>
+</div>
+<div class="flex gap-4 w-full md:w-auto">
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-surface-container-highest text-primary font-bold uppercase text-xs tracking-widest hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                    Filter
+                </button>
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-primary text-white font-bold uppercase text-xs tracking-widest hover:bg-primary-container transition-colors shadow-lg">
+<span class="material-symbols-outlined text-sm">download</span>
+                    Export CSV
+                </button>
+</div>
+</div>
+<!-- Ledger Container -->
+<div class="bg-surface-container-lowest overflow-hidden">
+<!-- Ledger Header -->
+<div class="grid grid-cols-12 gap-4 px-6 py-4 bg-surface-container text-secondary font-bold text-[10px] uppercase tracking-widest border-b border-outline-variant/10">
+<div class="col-span-3 md:col-span-2">Date</div>
+<div class="col-span-3 md:col-span-2 text-center md:text-left">Auto-Log</div>
+<div class="col-span-6 md:col-span-4">Office Location</div>
+<div class="hidden md:block md:col-span-2">Status</div>
+<div class="hidden md:block md:col-span-2 text-right">Verification</div>
+</div>
+<!-- Entries -->
+<div class="divide-y divide-outline-variant/5">
+<!-- Entry 1 -->
+<div class="grid grid-cols-12 gap-4 px-6 py-6 items-center ledger-row">
+<div class="col-span-3 md:col-span-2">
+<span class="block text-sm font-bold text-primary">Mar 12, 2024</span>
+</div>
+<div class="col-span-3 md:col-span-2 text-center md:text-left">
+<span class="text-xs font-mono bg-surface-container-high px-2 py-1 text-primary">09:14 AM</span>
+</div>
+<div class="col-span-6 md:col-span-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container">location_on</span>
+<span class="text-sm font-medium">Wilmington HQ</span>
+</div>
+<div class="hidden md:block md:col-span-2">
+<span class="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 border border-primary text-primary">Badge In</span>
+</div>
+<div class="hidden md:block md:col-span-2 text-right">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<!-- Entry 2 -->
+<div class="grid grid-cols-12 gap-4 px-6 py-6 items-center ledger-row">
+<div class="col-span-3 md:col-span-2">
+<span class="block text-sm font-bold text-primary">Mar 11, 2024</span>
+</div>
+<div class="col-span-3 md:col-span-2 text-center md:text-left">
+<span class="text-xs font-mono bg-surface-container-high px-2 py-1 text-primary">08:52 AM</span>
+</div>
+<div class="col-span-6 md:col-span-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container">location_on</span>
+<span class="text-sm font-medium">Wilmington HQ</span>
+</div>
+<div class="hidden md:block md:col-span-2">
+<span class="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 border border-primary text-primary">Badge In</span>
+</div>
+<div class="hidden md:block md:col-span-2 text-right">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<!-- Entry 3 -->
+<div class="grid grid-cols-12 gap-4 px-6 py-6 items-center ledger-row">
+<div class="col-span-3 md:col-span-2">
+<span class="block text-sm font-bold text-primary">Mar 08, 2024</span>
+</div>
+<div class="col-span-3 md:col-span-2 text-center md:text-left">
+<span class="text-xs font-mono bg-surface-container-high px-2 py-1 text-primary">10:05 AM</span>
+</div>
+<div class="col-span-6 md:col-span-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container">location_on</span>
+<span class="text-sm font-medium">Remote (Home)</span>
+</div>
+<div class="hidden md:block md:col-span-2">
+<span class="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 border border-outline-variant text-outline">Network Log</span>
+</div>
+<div class="hidden md:block md:col-span-2 text-right">
+<span class="material-symbols-outlined text-outline-variant">verified</span>
+</div>
+</div>
+<!-- Entry 4 -->
+<div class="grid grid-cols-12 gap-4 px-6 py-6 items-center ledger-row">
+<div class="col-span-3 md:col-span-2">
+<span class="block text-sm font-bold text-primary">Mar 06, 2024</span>
+</div>
+<div class="col-span-3 md:col-span-2 text-center md:text-left">
+<span class="text-xs font-mono bg-surface-container-high px-2 py-1 text-primary">08:41 AM</span>
+</div>
+<div class="col-span-6 md:col-span-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container">location_on</span>
+<span class="text-sm font-medium">Wilmington HQ</span>
+</div>
+<div class="hidden md:block md:col-span-2">
+<span class="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 border border-primary text-primary">Badge In</span>
+</div>
+<div class="hidden md:block md:col-span-2 text-right">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<!-- Entry 5 -->
+<div class="grid grid-cols-12 gap-4 px-6 py-6 items-center ledger-row">
+<div class="col-span-3 md:col-span-2">
+<span class="block text-sm font-bold text-primary">Mar 05, 2024</span>
+</div>
+<div class="col-span-3 md:col-span-2 text-center md:text-left">
+<span class="text-xs font-mono bg-surface-container-high px-2 py-1 text-primary">09:02 AM</span>
+</div>
+<div class="col-span-6 md:col-span-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container">location_on</span>
+<span class="text-sm font-medium">Satellite Office B</span>
+</div>
+<div class="hidden md:block md:col-span-2">
+<span class="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 border border-primary text-primary">Badge In</span>
+</div>
+<div class="hidden md:block md:col-span-2 text-right">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Visualization Insert (Bento Style) -->
+<div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-primary-container p-8 text-white">
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 opacity-70">Current Streak</p>
+<p class="text-5xl font-black mb-2">12</p>
+<p class="text-sm opacity-80 leading-relaxed">Consecutive office days logged. You are in the top 5% of your department.</p>
+</div>
+<div class="bg-surface-container-low p-8 border-l-4 border-secondary-container">
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 text-secondary">Most Frequent Location</p>
+<p class="text-2xl font-bold text-primary mb-2">Wilmington HQ</p>
+<p class="text-sm text-secondary leading-relaxed">Accounted for 84% of your total office presence this month.</p>
+</div>
+<div class="relative overflow-hidden group bg-surface-container-highest">
+<img alt="Modern office architecture" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:scale-105 transition-transform duration-700" data-alt="Interior of a modern architectural office space with glass walls, clean lines, and neutral tones, professional and airy atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnDyiu824Xl9QT9-I2mNotDvhqDgAzA94fLwpJcKZOi6Auo-Zwbzv5ywEUtVUgs1T9uxkT5Go0Wyx01xd1TDbSJI9tWUbXZvy8QTki5LqcRgRo4Z8waP9mKM2IDLnL7bJEemfD0UBPNekNiyS1DhC1YIXBfT4qDLFPvqVQfgC06l6tl8DqULOxegj7E7F-gRRW2Nb42T9WBqcfsUM_uMk5DpiPJeYBd0u4e7jE6KZ6qoR05ogDEOynyNGx8msPV_EFBnSc0vVKlwLN"/>
+<div class="relative z-10 p-8 h-full flex flex-col justify-between">
+<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Next Planned Day</p>
+<div>
+<p class="text-xl font-black text-primary">Tomorrow, Mar 13</p>
+<p class="text-xs text-secondary mt-1">Status: Confirmed</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Component -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-white dark:bg-slate-900 px-4 h-16 border-t border-slate-100 dark:border-slate-800 md:hidden">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 transition-all duration-200 hover:text-[#0064D2]" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 transition-all duration-200 hover:text-[#0064D2]" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Plan</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#0064D2] dark:text-blue-400 border-t-2 border-[#0064D2] pt-2 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Insights</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 pt-2 transition-all duration-200 hover:text-[#0064D2]" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-[11px] font-medium uppercase tracking-wider">Setup</span>
+</a>
+</nav>
+</body></html>
