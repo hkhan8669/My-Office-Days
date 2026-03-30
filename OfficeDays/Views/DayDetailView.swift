@@ -78,9 +78,32 @@ struct DayDetailView: View {
                     .padding(.vertical, 14)
                     .background(Theme.surfaceContainerLow)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
+                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
+
+                // Summary hint
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Theme.color(for: selectedType))
+                            .frame(width: 10, height: 10)
+                        Text("This day will be logged as \(selectedType.label)")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    if selectedType.countsTowardTarget {
+                        Text("Counts toward your quarterly target")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.vacation)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 24)
 
                 Spacer()
 
@@ -95,13 +118,13 @@ struct DayDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Theme.primaryContainer)
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Theme.accent)
                         )
                 }
                 .buttonStyle(PressableButtonStyle())
                 .padding(.horizontal, 20)
-                .padding(.bottom, 8)
+                .padding(.bottom, 16)
             }
             .background(Theme.surfaceContainerLowest)
             .navigationBarTitleDisplayMode(.inline)
@@ -158,7 +181,7 @@ struct DayDetailView: View {
 
                     Text(type.letterCode)
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
-                        .foregroundStyle(isSelected ? .white : Theme.outline)
+                        .foregroundStyle(isSelected ? .white : Theme.textSecondary)
                 }
                 .frame(minWidth: 44, minHeight: 44)
 

@@ -20,7 +20,7 @@ struct SplashView: View {
     @State private var shapeRotation: Double = 0
     @State private var shapeScale: CGFloat = 0.8
 
-    private let dotTimer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
+    private let dotTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
@@ -131,7 +131,7 @@ struct SplashView: View {
                     )
                 )
                 .frame(width: 96, height: 96)
-                .shadow(color: Theme.primary.opacity(0.3), radius: 20, y: 10)
+                .shadow(color: Theme.primary.opacity(0.3), radius: 12, y: 6)
                 .shadow(color: Theme.primary.opacity(0.1), radius: 4, y: 2)
 
             // Icon
@@ -258,7 +258,7 @@ struct SplashView: View {
     }
 
     private func scheduleDismissal() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
             withAnimation(.easeInOut(duration: 0.35)) {
                 isActive = false
             }

@@ -7,6 +7,7 @@ struct CalendarTabView: View {
     @State private var selectedDate: IdentifiableDate?
     @State private var isMultiSelectMode = false
     @State private var multiSelectedDates: Set<String> = []
+    @State private var cachedCalendarDays: [Date?] = []
 
     private let weekdayHeaders = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
@@ -64,9 +65,11 @@ struct CalendarTabView: View {
         }
         .onAppear {
             viewModel.refreshMonthCache(for: displayedMonth)
+            cachedCalendarDays = calendarDays()
         }
         .onChange(of: displayedMonth) { _, newValue in
             viewModel.refreshMonthCache(for: newValue)
+            cachedCalendarDays = calendarDays()
         }
     }
 
@@ -173,7 +176,7 @@ struct CalendarTabView: View {
     // MARK: - Calendar Grid
 
     private var calendarGrid: some View {
-        let days = calendarDays()
+        let days = cachedCalendarDays
 
         return VStack(spacing: 0) {
             // Weekday headers
@@ -217,7 +220,7 @@ struct CalendarTabView: View {
                 }
                 .background(
                     rowIndex % 2 == 0
-                        ? Theme.surfaceContainerLow.opacity(0.5)
+                        ? Theme.surfaceContainerLow.opacity(0.7)
                         : Theme.surfaceContainerLowest
                 )
             }
@@ -284,18 +287,15 @@ struct CalendarTabView: View {
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                     } else if isWeekend {
-                        // Weekend - empty, no circle
-                        Circle()
-                            .fill(Color.clear)
+                        Color.clear
                             .frame(width: 30, height: 30)
                     } else {
-                        // Unlogged weekday - outlined circle with dash
                         Circle()
                             .stroke(Theme.outline.opacity(0.3), lineWidth: 1.5)
                             .frame(width: 30, height: 30)
-                        Text("\u{2013}")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Theme.outline.opacity(0.4))
+                        Circle()
+                            .fill(Theme.outline.opacity(0.25))
+                            .frame(width: 6, height: 6)
                     }
                 }
             }

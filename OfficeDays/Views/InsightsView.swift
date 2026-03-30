@@ -6,13 +6,13 @@ struct InsightsView: View {
     @State private var filterType: DayTypeFilter = .all
     @State private var showShareSheet = false
     @State private var csvContent = ""
+    @State private var cachedAllDays: [AttendanceDay] = []
 
     private var quarter: QuarterHelper.QuarterInfo {
         QuarterHelper.quarterInfo(for: Date())
     }
 
-    /// All attendance days across current year and previous year for the full activity log.
-    private var allDays: [AttendanceDay] {
+    private func loadAllDays() -> [AttendanceDay] {
         let currentYear = Calendar.current.component(.year, from: Date())
         var days: [AttendanceDay] = []
         for year in (currentYear - 1)...currentYear {
@@ -20,13 +20,12 @@ struct InsightsView: View {
                 days.append(contentsOf: viewModel.allDays(in: q))
             }
         }
-        // Deduplicate by dateKey in case of overlap
         var seen = Set<String>()
         return days.filter { seen.insert($0.dateKey).inserted }
     }
 
     private var ledgerEntries: [AttendanceDay] {
-        let days = allDays.sorted { $0.date > $1.date }
+        let days = cachedAllDays.sorted { $0.date > $1.date }
 
         switch filterType {
         case .all:
@@ -45,7 +44,7 @@ struct InsightsView: View {
     private var currentStreak: Int {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        let officeDays = allDays
+        let officeDays = cachedAllDays
             .filter { $0.dayType.countsTowardTarget }
             .map { calendar.startOfDay(for: $0.date) }
             .sorted(by: >)
@@ -53,10 +52,8 @@ struct InsightsView: View {
         var streak = 0
         var checkDate = today
 
-        // Walk backwards through weekdays
         while true {
             let weekday = calendar.component(.weekday, from: checkDate)
-            // Skip weekends
             if weekday == 1 || weekday == 7 {
                 checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
                 continue
@@ -72,7 +69,7 @@ struct InsightsView: View {
     }
 
     private var mostFrequentLocation: String {
-        let officeNames = allDays
+        let officeNames = cachedAllDays
             .compactMap { $0.officeName }
             .filter { !$0.isEmpty }
 
@@ -85,7 +82,7 @@ struct InsightsView: View {
 
     private var nextPlannedDay: AttendanceDay? {
         let today = Calendar.current.startOfDay(for: Date())
-        return allDays
+        return cachedAllDays
             .filter { $0.dayType == .planned && Calendar.current.startOfDay(for: $0.date) > today }
             .sorted { $0.date < $1.date }
             .first
@@ -107,6 +104,9 @@ struct InsightsView: View {
             .background(Theme.surfaceGradient.ignoresSafeArea())
             .navigationTitle("Activity Log")
             .navigationBarTitleDisplayMode(.large)
+        }
+        .onAppear {
+            cachedAllDays = loadAllDays()
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(text: csvContent)
@@ -171,7 +171,7 @@ struct InsightsView: View {
                                     .fill(filterType == filter ? Theme.primaryContainer : Theme.surfaceContainer)
                             )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle())
                 }
             }
         }
@@ -184,13 +184,13 @@ struct InsightsView: View {
             // Table header
             HStack(spacing: 0) {
                 Text("DATE")
-                    .frame(width: 90, alignment: .leading)
+                    .frame(width: 82, alignment: .leading)
                 Text("TIME")
-                    .frame(width: 64, alignment: .leading)
+                    .frame(width: 56, alignment: .leading)
                 Text("LOCATION")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("STATUS")
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 72, alignment: .trailing)
             }
             .font(.caption2.weight(.bold))
             .foregroundStyle(Theme.textTertiary)
@@ -213,6 +213,14 @@ struct InsightsView: View {
             } else {
                 ForEach(Array(ledgerEntries.prefix(50).enumerated()), id: \.element.dateKey) { index, day in
                     ledgerRow(day: day, isEven: index % 2 == 0)
+                }
+
+                if ledgerEntries.count > 50 {
+                    Text("Showing 50 of \(ledgerEntries.count) entries")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textTertiary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
                 }
             }
         }
@@ -237,7 +245,7 @@ struct InsightsView: View {
                     .font(.caption2)
                     .foregroundStyle(Theme.textTertiary)
             }
-            .frame(width: 90, alignment: .leading)
+            .frame(width: 82, alignment: .leading)
 
             // Time column - auto-log time chip
             Group {
@@ -252,12 +260,10 @@ struct InsightsView: View {
                                 .fill(Theme.accent.opacity(0.08))
                         )
                 } else {
-                    Text("--:--")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Theme.textTertiary)
+                    Color.clear
                 }
             }
-            .frame(width: 64, alignment: .leading)
+            .frame(width: 56, alignment: .leading)
 
             // Location column
             HStack(spacing: 4) {
@@ -287,7 +293,7 @@ struct InsightsView: View {
 
             // Status badge
             statusBadge(for: day)
-                .frame(width: 80, alignment: .trailing)
+                .frame(width: 72, alignment: .trailing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -341,7 +347,7 @@ struct InsightsView: View {
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
 
-                Text("consecutive office days")
+                Text(currentStreak > 0 ? "consecutive office days" : "Start your streak!")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.75))
             }

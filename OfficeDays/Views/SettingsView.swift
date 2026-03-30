@@ -12,15 +12,9 @@ struct SettingsView: View {
     @State private var targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
     @State private var detectionRadius: Double = 820
     @State private var showAddOffice = false
+    @State private var currentYearHolidays: [AttendanceViewModel.ManagedHoliday] = []
     private var activeOfficeCount: Int {
         viewModel.offices().filter(\.isEnabled).count
-    }
-
-    private var currentYearHolidays: [AttendanceViewModel.ManagedHoliday] {
-        let year = Calendar.current.component(.year, from: Date())
-        return viewModel.holidays(for: year)
-            .filter { $0.date >= Date() }
-            .sorted { $0.date < $1.date }
     }
 
     var body: some View {
@@ -86,6 +80,10 @@ struct SettingsView: View {
             if let firstOffice = viewModel.offices().first {
                 detectionRadius = firstOffice.geofenceRadius * 3.28084
             }
+            let year = Calendar.current.component(.year, from: Date())
+            currentYearHolidays = viewModel.holidays(for: year)
+                .filter { $0.date >= Date() }
+                .sorted { $0.date < $1.date }
         }
     }
 
@@ -483,13 +481,42 @@ struct SettingsView: View {
 
                     Spacer()
 
-                    Stepper(value: $targetDaysPerQuarter, in: 20...60) {
+                    HStack(spacing: 12) {
+                        Button {
+                            if targetDaysPerQuarter > 20 {
+                                targetDaysPerQuarter -= 1
+                            }
+                        } label: {
+                            Image(systemName: "minus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(targetDaysPerQuarter > 20 ? Theme.accent : Theme.outline)
+                                .frame(width: 32, height: 32)
+                                .background(Theme.surfaceContainer)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                        .disabled(targetDaysPerQuarter <= 20)
+
                         Text("\(targetDaysPerQuarter)")
                             .font(.system(.title3, design: .monospaced).weight(.bold))
                             .foregroundStyle(Theme.onSurface)
+                            .frame(minWidth: 36)
+
+                        Button {
+                            if targetDaysPerQuarter < 60 {
+                                targetDaysPerQuarter += 1
+                            }
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(targetDaysPerQuarter < 60 ? Theme.accent : Theme.outline)
+                                .frame(width: 32, height: 32)
+                                .background(Theme.surfaceContainer)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                        .disabled(targetDaysPerQuarter >= 60)
                     }
-                    .labelsHidden()
-                    .fixedSize()
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)

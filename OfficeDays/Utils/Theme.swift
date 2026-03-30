@@ -66,8 +66,8 @@ enum Theme {
     static let freeDay = Color.dynamic(light: 0x0064D2, dark: 0x5BC0EB)
     /// Travel - teal/cyan
     static let travel = Color.dynamic(light: 0x0891B2, dark: 0x22D3EE)
-    /// Remote - gray
-    static let remote = Color.dynamic(light: 0x9CA3AF, dark: 0xD1D5DB)
+    /// Remote - blue-tinted gray
+    static let remote = Color.dynamic(light: 0x8B97A8, dark: 0xB8C4D4)
 
     // MARK: - Semantic / Status
 

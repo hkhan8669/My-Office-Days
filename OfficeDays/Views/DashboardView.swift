@@ -133,11 +133,10 @@ struct DashboardView: View {
                 Circle()
                     .trim(from: 0, to: animateProgress ? progress : 0)
                     .stroke(
-                        AngularGradient(
-                            colors: [Theme.accent, Theme.primaryContainer, Theme.accent],
-                            center: .center,
-                            startAngle: .degrees(0),
-                            endAngle: .degrees(360 * progress)
+                        LinearGradient(
+                            colors: [Theme.accent, Theme.primaryContainer],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         ),
                         style: StrokeStyle(lineWidth: 18, lineCap: .round)
                     )
@@ -152,7 +151,8 @@ struct DashboardView: View {
                     +
                     Text(" / \(target)")
                         .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundColor(Theme.textTertiary))
+                        .foregroundColor(Theme.textTertiary)
+                        .baselineOffset(-4))
                     .contentTransition(.numericText())
 
                     Text("DAYS")
@@ -177,7 +177,11 @@ struct DashboardView: View {
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(paceColor.opacity(0.1))
+                    .fill(paceColor.opacity(0.15))
+                    .overlay(
+                        Capsule()
+                            .stroke(paceColor.opacity(0.3), lineWidth: 1)
+                    )
             )
             .padding(.top, 4)
 
@@ -231,12 +235,11 @@ struct DashboardView: View {
                 Button {
                     showDayDetail = true
                 } label: {
-                    Text("LOG STATUS CHANGE")
-                        .font(.system(size: 13, weight: .bold))
-                        .tracking(1)
+                    Text("Log Today's Status")
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 14)
                         .background(
                             Capsule()
                                 .fill(Theme.accent)
@@ -367,13 +370,15 @@ struct DashboardView: View {
                 // Activity rows
                 let recentDays = recentActivityDays
                 if recentDays.isEmpty {
-                    HStack {
-                        Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.title2)
+                            .foregroundStyle(Theme.textTertiary)
                         Text("No logged days yet this quarter")
                             .font(.subheadline)
                             .foregroundStyle(Theme.textTertiary)
-                        Spacer()
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
                 } else {
                     ForEach(Array(recentDays.enumerated()), id: \.element.dateKey) { index, day in
@@ -521,7 +526,7 @@ struct DashboardView: View {
                 Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(3)
+                    .lineLimit(2)
             }
 
             Spacer(minLength: 0)
