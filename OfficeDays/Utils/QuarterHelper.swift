@@ -3,7 +3,6 @@ import Foundation
 enum AppPreferences {
     private static let targetDaysKey = "targetDaysPerQuarter"
     private static let trackingEnabledKey = "trackingEnabled"
-    private static let hasSeenTrackingOnboardingKey = "hasSeenTrackingOnboarding"
     static let defaultTargetDaysPerQuarter = 39
 
     static var targetDaysPerQuarter: Int {
@@ -26,13 +25,6 @@ enum AppPreferences {
         UserDefaults.standard.set(enabled, forKey: trackingEnabledKey)
     }
 
-    static var hasSeenTrackingOnboarding: Bool {
-        UserDefaults.standard.bool(forKey: hasSeenTrackingOnboardingKey)
-    }
-
-    static func setHasSeenTrackingOnboarding(_ value: Bool) {
-        UserDefaults.standard.set(value, forKey: hasSeenTrackingOnboardingKey)
-    }
 }
 
 struct QuarterHelper {

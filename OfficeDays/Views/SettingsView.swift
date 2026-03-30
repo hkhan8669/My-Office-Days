@@ -868,14 +868,8 @@ struct SettingsView: View {
 struct OfficeListView: View {
     let viewModel: AttendanceViewModel
     @ObservedObject var geofenceService: GeofenceService
-    @State private var editingOffice: OfficeLocation?
     @State private var editingDetailsOffice: OfficeLocation?
-    @State private var radiusFeetText = ""
     @State private var showAddOffice = false
-
-    private func radiusInFeet(_ meters: Double) -> Int {
-        Int((meters / 0.3048).rounded())
-    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -933,59 +927,13 @@ struct OfficeListView: View {
                             Image(systemName: "scope")
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(Theme.onSurfaceVariant)
-
                             Text("Radius")
                                 .font(.caption)
                                 .foregroundStyle(Theme.onSurfaceVariant)
-
                             Spacer()
-
-                            if editingOffice?.id == office.id {
-                                HStack(spacing: 4) {
-                                    TextField("feet", text: $radiusFeetText)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(Theme.onSurface)
-                                        .keyboardType(.numberPad)
-                                        .multilineTextAlignment(.trailing)
-                                        .frame(width: 56)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 6)
-                                        .background(Theme.surfaceContainerLow)
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                                    Text("ft")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.onSurfaceVariant)
-
-                                    Button {
-                                        if let feet = Double(radiusFeetText), feet >= 200, feet <= 2000 {
-                                            viewModel.updateOfficeRadius(office: office, radiusInFeet: feet)
-                                            geofenceService.refreshMonitoring()
-                                        }
-                                        editingOffice = nil
-                                    } label: {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.title3)
-                                            .foregroundStyle(Theme.accent)
-                                    }
-                                    .buttonStyle(PressableButtonStyle())
-                                }
-                            } else {
-                                Button {
-                                    radiusFeetText = "\(radiusInFeet(office.geofenceRadius))"
-                                    editingOffice = office
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text("\(radiusInFeet(office.geofenceRadius)) ft")
-                                            .font(.system(.caption, design: .monospaced).weight(.semibold))
-                                            .foregroundStyle(Theme.accent)
-                                        Image(systemName: "pencil")
-                                            .font(.caption2.weight(.semibold))
-                                            .foregroundStyle(Theme.accent)
-                                    }
-                                }
-                                .buttonStyle(PressableButtonStyle())
-                            }
+                            Text("\(Int(office.geofenceRadius * 3.28084)) ft")
+                                .font(.system(.caption, design: .monospaced).weight(.semibold))
+                                .foregroundStyle(Theme.accent)
 
                             if office.isCustom {
                                 Button(role: .destructive) {
@@ -1042,7 +990,7 @@ struct OfficeListView: View {
             AddOfficeSheet(viewModel: viewModel, geofenceService: geofenceService)
         }
         .sheet(item: $editingDetailsOffice) { office in
-            EditOfficeSheet(office: office)
+            EditOfficeSheet(office: office, viewModel: viewModel)
         }
     }
 }
@@ -1051,6 +999,7 @@ struct OfficeListView: View {
 
 private struct EditOfficeSheet: View {
     let office: OfficeLocation
+    let viewModel: AttendanceViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
@@ -1073,12 +1022,9 @@ private struct EditOfficeSheet: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Save") {
-                        let trimmed = editName.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !trimmed.isEmpty {
-                            office.name = trimmed
-                            office.address = editAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-                            try? modelContext.save()
-                        }
+                        viewModel.updateOfficeName(office, newName: editName)
+                        office.address = editAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+                        try? modelContext.save()
                         dismiss()
                     }
                     .disabled(editName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -1501,7 +1447,11 @@ struct CSVShareSheet: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("OfficeDays_\(year).csv")
-        try? csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
+        do {
+            try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
+        } catch {
+            return UIActivityViewController(activityItems: [csvContent], applicationActivities: nil)
+        }
         return UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
     }
 

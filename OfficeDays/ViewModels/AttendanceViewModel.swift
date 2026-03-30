@@ -258,8 +258,6 @@ final class AttendanceViewModel {
     }
 
     func holidays(for year: Int) -> [ManagedHoliday] {
-        ensureHolidays(for: year)
-
         let calendar = Calendar.current
         let startOfYear = calendar.date(from: DateComponents(year: year, month: 1, day: 1)) ?? Date()
         let endOfYear = calendar.date(from: DateComponents(year: year, month: 12, day: 31)) ?? startOfYear
@@ -375,6 +373,20 @@ final class AttendanceViewModel {
         saveChanges("Unable to save the office location.")
     }
 
+    func updateOfficeName(_ office: OfficeLocation, newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            lastErrorMessage = "Office name is required."
+            return
+        }
+        if offices().contains(where: { $0.id != office.id && $0.name.localizedCaseInsensitiveCompare(trimmed) == .orderedSame }) {
+            lastErrorMessage = "Office names need to be unique."
+            return
+        }
+        office.name = trimmed
+        saveChanges("Unable to update the office name.")
+    }
+
     func deleteOffice(_ office: OfficeLocation) {
         guard office.isCustom else {
             lastErrorMessage = "Default offices can be disabled, but not deleted."
@@ -408,6 +420,9 @@ final class AttendanceViewModel {
             let dayDate = Calendar.current.startOfDay(for: day.date)
             let daysSince = Calendar.current.dateComponents([.day], from: dayDate, to: today).day ?? 0
             if daysSince >= 1 {
+                // Intentional: stale planned days are converted to .remote rather than
+                // deleted so the user still sees a record for that date. Changing this
+                // behaviour is deferred until we add an "unlogged" state.
                 day.dayType = .remote
                 day.updatedAt = Date()
                 changed = true
@@ -456,7 +471,7 @@ final class AttendanceViewModel {
             let weekday = calendar.component(.weekday, from: current)
             if weekday >= 2 && weekday <= 6 {
                 let day = dayMap[AttendanceDay.key(for: current)]
-                let typeString = day?.dayType.shortLabel ?? "Remote"
+                let typeString = day?.dayType.shortLabel ?? "Unlogged"
                 let office = day?.officeName ?? ""
                 let weekOfYear = calendar.component(.weekOfYear, from: current)
                 lines.append("\(weekOfYear),\(formatter.string(from: current)),\(weekdayFormatter.string(from: current)),\(csvField(typeString)),\(csvField(office))")
@@ -466,7 +481,7 @@ final class AttendanceViewModel {
         }
 
         lines.append("")
-        lines.append("Quarter,Office Days,Target,Delta")
+        lines.append("Quarter,Credited Days,Target,Delta")
         for quarter in QuarterHelper.allQuarters(for: year) {
             let count = officeDayCount(in: quarter)
             let delta = count - QuarterHelper.targetDaysPerQuarter

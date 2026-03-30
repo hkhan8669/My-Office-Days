@@ -15,7 +15,7 @@ struct InsightsView: View {
     private func loadAllDays() -> [AttendanceDay] {
         let currentYear = Calendar.current.component(.year, from: Date())
         var days: [AttendanceDay] = []
-        for year in (currentYear - 1)...currentYear {
+        for year in (currentYear - 2)...currentYear {
             for q in QuarterHelper.allQuarters(for: year) {
                 days.append(contentsOf: viewModel.allDays(in: q))
             }
@@ -211,17 +211,10 @@ struct InsightsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
             } else {
-                ForEach(Array(ledgerEntries.prefix(50).enumerated()), id: \.element.dateKey) { index, day in
+                ForEach(Array(ledgerEntries.enumerated()), id: \.element.dateKey) { index, day in
                     ledgerRow(day: day, isEven: index % 2 == 0)
                 }
 
-                if ledgerEntries.count > 50 {
-                    Text("Showing 50 of \(ledgerEntries.count) entries")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textTertiary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
             }
         }
         .background(Theme.cardBackground)
@@ -512,7 +505,11 @@ private struct ShareSheet: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("OfficeDays_Export.csv")
-        try? text.write(to: tempURL, atomically: true, encoding: .utf8)
+        do {
+            try text.write(to: tempURL, atomically: true, encoding: .utf8)
+        } catch {
+            return UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        }
         return UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
     }
 

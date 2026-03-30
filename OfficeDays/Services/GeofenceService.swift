@@ -18,6 +18,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private var officesProvider: (() -> [OfficeLocation])?
     private var attendanceRefreshHandler: (() -> Void)?
     private var entryTimestamps: [String: Date]
+    private var dwellTimers: [String: Timer] = [:]
 
     @Published var authorizationStatus: CLAuthorizationStatus
     @Published var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
@@ -192,11 +193,14 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         // Start significant-location-change monitoring so iOS wakes the app
         // after ~15 minutes to evaluate the dwell threshold in the background.
         locationManager.startMonitoringSignificantLocationChanges()
+
+        scheduleDwellTimer(for: circularRegion.identifier)
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
         guard let circularRegion = region as? CLCircularRegion else { return }
         clearEntryTimestamp(for: circularRegion.identifier)
+        cancelDwellTimer(for: circularRegion.identifier)
         if entryTimestamps.isEmpty {
             locationManager.stopMonitoringSignificantLocationChanges()
         }
@@ -221,6 +225,9 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         case .inside:
             if entryTimestamps[circularRegion.identifier] == nil {
                 persistEntryTimestamp(now(), for: circularRegion.identifier)
+            }
+            if dwellTimers[circularRegion.identifier] == nil {
+                scheduleDwellTimer(for: circularRegion.identifier)
             }
             evaluateEntryIfEligible(for: circularRegion.identifier)
         case .outside:
@@ -266,6 +273,8 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         isMonitoring = false
         if clearEntries {
             entryTimestamps.removeAll()
+            dwellTimers.values.forEach { $0.invalidate() }
+            dwellTimers.removeAll()
             saveEntryTimestamps()
         }
         refreshStatusMessage()
@@ -314,6 +323,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         guard let entryTime = entryTimestamps[officeName] else { return }
         guard now().timeIntervalSince(entryTime) >= dwellTimeSeconds else { return }
         logOfficeDayIfNeeded(officeName: officeName)
+        cancelDwellTimer(for: officeName)
     }
 
     private func logOfficeDayIfNeeded(officeName: String) {
@@ -376,6 +386,21 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         } catch {
             errorMessage = "Auto check-in failed: \(error.localizedDescription)"
         }
+    }
+
+    private func scheduleDwellTimer(for officeName: String) {
+        dwellTimers[officeName]?.invalidate()
+        let timer = Timer.scheduledTimer(withTimeInterval: dwellTimeSeconds + 30, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.evaluateEntryIfEligible(for: officeName)
+            }
+        }
+        dwellTimers[officeName] = timer
+    }
+
+    private func cancelDwellTimer(for officeName: String) {
+        dwellTimers[officeName]?.invalidate()
+        dwellTimers.removeValue(forKey: officeName)
     }
 
     private func persistEntryTimestamp(_ date: Date, for officeName: String) {

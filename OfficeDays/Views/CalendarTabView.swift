@@ -326,6 +326,7 @@ struct CalendarTabView: View {
         .buttonStyle(PressableButtonStyle())
         .opacity(isWeekend ? 0.35 : 1)
         .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(accessibilityLabel(for: date, day: day, isToday: isToday, isWeekend: isWeekend))
         .accessibilityHint(accessibilityHint(for: date, isFuture: isFuture, isWeekend: isWeekend))
         .simultaneousGesture(
@@ -388,6 +389,7 @@ struct CalendarTabView: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Theme.onSurfaceVariant)
         }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Multi-Select Bar
@@ -533,7 +535,7 @@ struct CalendarTabView: View {
                 parts.append(officeName)
             }
         } else {
-            parts.append(DateHelper.isFuture(date) ? "No plan yet" : "Remote")
+            parts.append(DateHelper.isFuture(date) ? "No plan yet" : "Unlogged")
         }
 
         if isToday {
