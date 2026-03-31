@@ -1,5 +1,12 @@
 import SwiftUI
 
+private struct CellFramePreference: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
 struct CalendarTabView: View {
     let viewModel: AttendanceViewModel
 
@@ -8,8 +15,16 @@ struct CalendarTabView: View {
     @State private var isMultiSelectMode = false
     @State private var multiSelectedDates: Set<String> = []
     @State private var cachedCalendarDays: [Date?] = []
+    @State private var cellFrames: [String: CGRect] = [:]
 
     private let weekdayHeaders = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+    private static let dateKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -22,6 +37,22 @@ struct CalendarTabView: View {
 
                     calendarGrid
                         .padding(.horizontal, 16)
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 10, coordinateSpace: .named("calendarGrid"))
+                                .onChanged { value in
+                                    guard isMultiSelectMode else { return }
+                                    let location = value.location
+                                    for (dateKey, frame) in cellFrames {
+                                        if frame.contains(location) {
+                                            if let date = Self.dateKeyFormatter.date(from: dateKey),
+                                               DateHelper.isWeekday(date),
+                                               !multiSelectedDates.contains(dateKey) {
+                                                multiSelectedDates.insert(dateKey)
+                                            }
+                                        }
+                                    }
+                                }
+                        )
 
                     if !isMultiSelectMode {
                         legendSection
@@ -230,6 +261,10 @@ struct CalendarTabView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
         )
+        .coordinateSpace(name: "calendarGrid")
+        .onPreferenceChange(CellFramePreference.self) { frames in
+            cellFrames = frames
+        }
     }
 
     // MARK: - Day Cell
@@ -325,6 +360,14 @@ struct CalendarTabView: View {
         }
         .buttonStyle(PressableButtonStyle())
         .opacity(isWeekend ? 0.35 : 1)
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: CellFramePreference.self,
+                    value: [dateKey: geo.frame(in: .named("calendarGrid"))]
+                )
+            }
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(accessibilityLabel(for: date, day: day, isToday: isToday, isWeekend: isWeekend))

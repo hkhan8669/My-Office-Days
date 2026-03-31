@@ -24,7 +24,7 @@ final class AttendanceViewModel {
         var travelDays: Int = 0
 
         var targetDays: Int {
-            officeDays + officeCreditDays + travelDays
+            officeDays + officeCreditDays + travelDays + holidayDays + vacationDays
         }
     }
 
@@ -37,7 +37,7 @@ final class AttendanceViewModel {
         let travelDays: Int
 
         var targetDays: Int {
-            officeDays + officeCreditDays + travelDays
+            officeDays + officeCreditDays + travelDays + holidayDays + vacationDays
         }
 
         var delta: Int { targetDays - QuarterHelper.targetDaysPerQuarter }

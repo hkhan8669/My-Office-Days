@@ -187,7 +187,7 @@ struct SplashView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Theme.accent.opacity(0.7))
 
-            Text("Data is secure and stored locally")
+            Text("All data is securely saved on your device")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Theme.onSurfaceVariant)
         }

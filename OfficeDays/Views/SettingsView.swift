@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import MapKit
 
 struct SettingsView: View {
     let viewModel: AttendanceViewModel
@@ -741,7 +742,7 @@ struct SettingsView: View {
                         }
                         .buttonStyle(PressableButtonStyle())
 
-                        Text("\(exportYear)")
+                        Text(String(exportYear))
                             .font(.system(.body, design: .monospaced).weight(.bold))
                             .foregroundStyle(Theme.onSurface)
                             .frame(minWidth: 48)
@@ -1046,31 +1047,134 @@ struct AddOfficeSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
-    @State private var address = ""
-    @State private var latitude = ""
-    @State private var longitude = ""
-    @State private var radiusInFeet = "250"
+    @State private var searchQuery = ""
+    @State private var searchResults: [MKMapItem] = []
+    @State private var selectedMapItem: MKMapItem?
+    @State private var isSearching = false
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 39.6685, longitude: -75.7506),
+        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    )
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Office") {
-                    TextField("Name", text: $name)
-                    TextField("Address", text: $address, axis: .vertical)
+            VStack(spacing: 0) {
+                // Name field
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("OFFICE NAME")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1.5)
+                    TextField("e.g. Newark HQ", text: $name)
+                        .font(.body)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Theme.surfaceContainerLow)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+
+                // Search field
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("SEARCH ADDRESS")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1.5)
+
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(Theme.textTertiary)
+                        TextField("Search for an address...", text: $searchQuery)
+                            .font(.body)
+                            .onSubmit { performSearch() }
+                        if isSearching {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                        if !searchQuery.isEmpty {
+                            Button {
+                                searchQuery = ""
+                                searchResults = []
+                                selectedMapItem = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Theme.surfaceContainerLow)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+
+                // Search results or map
+                if !searchResults.isEmpty && selectedMapItem == nil {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(searchResults, id: \.self) { item in
+                                Button {
+                                    selectMapItem(item)
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "mappin.circle.fill")
+                                            .font(.title3)
+                                            .foregroundStyle(Theme.accent)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.name ?? "Unknown")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(Theme.textPrimary)
+                                            if let address = item.placemark.formattedAddress {
+                                                Text(address)
+                                                    .font(.caption)
+                                                    .foregroundStyle(Theme.textSecondary)
+                                                    .lineLimit(2)
+                                            }
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.textTertiary)
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 12)
+                                }
+                                Divider().padding(.leading, 56)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 300)
+                } else if let selected = selectedMapItem {
+                    // Show map preview
+                    VStack(spacing: 8) {
+                        Map(coordinateRegion: .constant(region), annotationItems: [MapPin(coordinate: selected.placemark.coordinate)]) { pin in
+                            MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                        }
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
+                        )
+
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.vacation)
+                            Text(selected.placemark.formattedAddress ?? "Location selected")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
                 }
 
-                Section("Coordinates") {
-                    TextField("Latitude", text: $latitude)
-                        .keyboardType(.numbersAndPunctuation)
-                    TextField("Longitude", text: $longitude)
-                        .keyboardType(.numbersAndPunctuation)
-                }
-
-                Section("Geofence") {
-                    TextField("Radius (feet)", text: $radiusInFeet)
-                        .keyboardType(.numberPad)
-                }
+                Spacer()
             }
+            .background(Theme.surfaceContainerLowest)
             .navigationTitle("Add Office")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1078,38 +1182,100 @@ struct AddOfficeSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Save") {
-                        save()
-                    }
-                    .disabled(!canSave)
+                    Button("Save") { save() }
+                        .disabled(!canSave)
+                        .fontWeight(.semibold)
                 }
+            }
+            .onChange(of: searchQuery) { _, newValue in
+                guard newValue.count >= 3 else {
+                    searchResults = []
+                    return
+                }
+                performSearch()
             }
         }
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        Double(latitude) != nil &&
-        Double(longitude) != nil &&
-        Double(radiusInFeet) != nil
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedMapItem != nil
+    }
+
+    private func performSearch() {
+        isSearching = true
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = searchQuery
+        request.resultTypes = .address
+
+        let search = MKLocalSearch(request: request)
+        search.start { response, error in
+            DispatchQueue.main.async {
+                isSearching = false
+                if let response {
+                    searchResults = Array(response.mapItems.prefix(8))
+                }
+            }
+        }
+    }
+
+    private func selectMapItem(_ item: MKMapItem) {
+        selectedMapItem = item
+        let coord = item.placemark.coordinate
+        region = MKCoordinateRegion(
+            center: coord,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        if name.isEmpty {
+            name = item.name ?? ""
+        }
     }
 
     private func save() {
-        guard
-            let latitudeValue = Double(latitude),
-            let longitudeValue = Double(longitude),
-            let radiusValue = Double(radiusInFeet)
-        else { return }
+        guard let item = selectedMapItem else { return }
+        let coord = item.placemark.coordinate
+        let address = item.placemark.formattedAddress ?? searchQuery
+
+        // Use the global detection radius from the first office
+        let radiusInFeet: Double = {
+            if let firstOffice = viewModel.offices().first {
+                return firstOffice.geofenceRadius * 3.28084
+            }
+            return 820
+        }()
 
         viewModel.addOffice(
             name: name,
             address: address,
-            latitude: latitudeValue,
-            longitude: longitudeValue,
-            radiusInFeet: radiusValue
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            radiusInFeet: radiusInFeet
         )
         geofenceService.refreshMonitoring()
         dismiss()
+    }
+}
+
+// Helper for map annotation
+private struct MapPin: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
+}
+
+// Extension to get formatted address from CLPlacemark
+extension CLPlacemark {
+    var formattedAddress: String? {
+        var parts: [String] = []
+        if let street = thoroughfare {
+            if let subThoroughfare = subThoroughfare {
+                parts.append("\(subThoroughfare) \(street)")
+            } else {
+                parts.append(street)
+            }
+        }
+        if let city = locality { parts.append(city) }
+        if let state = administrativeArea { parts.append(state) }
+        if let zip = postalCode { parts.append(zip) }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 }
 
@@ -1139,7 +1305,7 @@ struct HolidayManagementView: View {
                     }
                     .buttonStyle(PressableButtonStyle())
 
-                    Text("\(selectedYear)")
+                    Text(String(selectedYear))
                         .font(.title3.bold())
                         .foregroundStyle(Theme.onSurface)
 
@@ -1201,7 +1367,7 @@ struct HolidayManagementView: View {
                     }
 
                     if holidays.isEmpty {
-                        Text("No holidays for \(selectedYear)")
+                        Text("No holidays for \(String(selectedYear))")
                             .font(.subheadline)
                             .foregroundStyle(Theme.onSurfaceVariant)
                             .padding(.vertical, 20)

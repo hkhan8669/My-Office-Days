@@ -60,7 +60,7 @@ enum DayType: String, Codable, CaseIterable, Identifiable {
     }
 
     var countsTowardTarget: Bool {
-        self == .office || self == .freeDay || self == .travel
+        self == .office || self == .freeDay || self == .travel || self == .holiday || self == .vacation
     }
 
     static var manualOptions: [DayType] {

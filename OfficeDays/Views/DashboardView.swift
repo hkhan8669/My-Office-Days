@@ -483,13 +483,6 @@ struct DashboardView: View {
                 color: daysRemaining > 0 ? Theme.accent : Theme.vacation
             )
 
-            // Tracking status card
-            infoCard(
-                icon: trackingIcon,
-                title: "Auto Tracking",
-                subtitle: trackingSubtitle,
-                color: trackingColor
-            )
         }
     }
 
@@ -534,49 +527,4 @@ struct DashboardView: View {
         .cardStyle(cornerRadius: 14, padding: 14)
     }
 
-    // MARK: - Tracking Helpers
-
-    private var trackingIcon: String {
-        if geofenceService.isMonitoring {
-            return "location.circle.fill"
-        }
-        if !geofenceService.isTrackingEnabled {
-            return "location.slash"
-        }
-        return "exclamationmark.triangle.fill"
-    }
-
-    private var trackingColor: Color {
-        if !geofenceService.isTrackingEnabled {
-            return Theme.textSecondary
-        }
-        if geofenceService.isMonitoring {
-            return Theme.vacation
-        }
-        switch geofenceService.authorizationStatus {
-        case .denied, .restricted:
-            return Theme.behind
-        default:
-            return Theme.planned
-        }
-    }
-
-    private var trackingSubtitle: String {
-        if !geofenceService.isTrackingEnabled {
-            return "Location tracking is disabled. Enable it in Settings."
-        }
-        let enabledOfficeCount = viewModel.offices().filter(\.isEnabled).count
-        if geofenceService.isMonitoring {
-            if let office = geofenceService.lastCheckedInOffice {
-                return "Last auto check-in at \(office). Monitoring \(enabledOfficeCount) offices."
-            }
-            return "Actively monitoring \(enabledOfficeCount) office\(enabledOfficeCount == 1 ? "" : "s")."
-        }
-        switch geofenceService.authorizationStatus {
-        case .denied, .restricted:
-            return "Location permission needed. Open Settings to allow access."
-        default:
-            return "Setup required. Open Settings to configure tracking."
-        }
-    }
 }
