@@ -120,9 +120,13 @@ struct CalendarTabView: View {
                         .foregroundStyle(Theme.onSurface)
 
                     if isMultiSelectMode {
-                        Text("\(multiSelectedDates.count) selected")
+                        Text("\(multiSelectedDates.count) selected — drag to select more")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(Theme.accent)
+                    } else {
+                        Text("Hold a day to multi-select · Tap to edit")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.onSurfaceVariant)
                     }
                 }
 

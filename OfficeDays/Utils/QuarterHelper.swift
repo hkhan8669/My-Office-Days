@@ -103,43 +103,42 @@ struct QuarterHelper {
     }
 
     enum PaceStatus {
-        case onTrack, ahead, behind
+        case complete, onTrack, tight, atRisk, offTrack
 
         var label: String {
             switch self {
+            case .complete: "Complete"
             case .onTrack: "On Track"
-            case .ahead: "Ahead"
-            case .behind: "Behind"
+            case .tight: "Tight"
+            case .atRisk: "At Risk"
+            case .offTrack: "Off Track"
             }
         }
 
         var icon: String {
             switch self {
-            case .onTrack: "checkmark.circle.fill"
-            case .ahead: "arrow.up.circle.fill"
-            case .behind: "exclamationmark.triangle.fill"
+            case .complete: "star.fill"
+            case .onTrack: "checkmark.seal.fill"
+            case .tight: "gauge.with.dots.needle.50percent"
+            case .atRisk: "exclamationmark.triangle.fill"
+            case .offTrack: "xmark.octagon.fill"
             }
         }
     }
 
     static func paceStatus(officeDays: Int, in quarter: QuarterInfo, asOf date: Date) -> PaceStatus {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: date)
-        guard today >= quarter.startDate else { return .onTrack }
+        let remaining = max(0, targetDaysPerQuarter - officeDays)
+        if remaining == 0 { return .complete }
 
-        let totalWeekdays = quarter.weekdaysInQuarter
-        guard totalWeekdays > 0 else { return .onTrack }
+        let weeks = weeksRemaining(in: quarter, from: date)
+        guard weeks > 0 else {
+            return remaining > 0 ? .offTrack : .complete
+        }
 
-        // Calculate elapsed weekdays
-        let elapsed = totalWeekdays - weekdaysRemaining(in: quarter, from: date)
-        guard elapsed > 0 else { return .onTrack }
-
-        let expectedRate = Double(targetDaysPerQuarter) / Double(totalWeekdays)
-        let expectedDays = expectedRate * Double(elapsed)
-
-        let diff = Double(officeDays) - expectedDays
-        if diff >= 1.0 { return .ahead }
-        if diff <= -2.0 { return .behind }
-        return .onTrack
+        let daysPerWeek = Double(remaining) / Double(weeks)
+        if daysPerWeek <= 3.0 { return .onTrack }
+        if daysPerWeek <= 4.0 { return .tight }
+        if daysPerWeek <= 5.0 { return .atRisk }
+        return .offTrack
     }
 }

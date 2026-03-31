@@ -58,9 +58,11 @@ struct DashboardView: View {
 
     private var paceColor: Color {
         switch pace {
-        case .onTrack: return Theme.accent
-        case .ahead: return Theme.vacation
-        case .behind: return Theme.behind
+        case .complete: return Theme.vacation
+        case .onTrack: return Theme.vacation
+        case .tight: return Theme.planned
+        case .atRisk: return Color.dynamic(light: 0xF97316, dark: 0xFB923C)
+        case .offTrack: return Theme.behind
         }
     }
 
