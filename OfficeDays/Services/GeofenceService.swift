@@ -251,7 +251,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         var descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= endKey && ($0.dayTypeRaw == "office" || $0.dayTypeRaw == "freeDay" || $0.dayTypeRaw == "travel") }
         )
-        descriptor.fetchLimit = 200
+        descriptor.fetchLimit = 500
 
         let officeDays = (try? context.fetch(descriptor).count) ?? 0
         let target = PeriodHelper.targetDaysPerPeriod

@@ -99,7 +99,7 @@ final class AttendanceViewModel {
 
     func ensureHolidays(for year: Int) {
         var inserted = false
-        for holiday in Holiday.companyHolidays(for: year) {
+        for holiday in Holiday.federalHolidays(for: year) {
             if let existingDay = attendanceDay(for: holiday.date) {
                 if existingDay.dayType == .holiday || !existingDay.isManualOverride {
                     existingDay.dayType = .holiday

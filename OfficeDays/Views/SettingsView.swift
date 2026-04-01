@@ -685,6 +685,7 @@ struct SettingsView: View {
                                 selectedWorkDays.insert(weekday)
                             }
                             AppPreferences.setWorkDays(selectedWorkDays)
+                            viewModel.invalidateMonthCache()
                             viewModel.refreshSnapshot()
                         } label: {
                             Text(Self.weekdayLabels[i])
@@ -1577,7 +1578,11 @@ private struct EditOfficeSheet: View {
             office.longitude = selected.placemark.coordinate.longitude
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            viewModel.lastErrorMessage = "Unable to save office changes."
+        }
         dismiss()
     }
 }
