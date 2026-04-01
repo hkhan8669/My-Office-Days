@@ -365,6 +365,42 @@ struct SettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
 
+                if geofenceService.authorizationStatus == .authorizedWhenInUse {
+                    Divider()
+                        .foregroundStyle(Theme.outlineVariant.opacity(0.3))
+                        .padding(.leading, 16)
+
+                    VStack(spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(Theme.planned)
+                            Text("\"While Using App\" won't track in the background. Change to \"Always\" in Settings for automatic office detection.")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "gear")
+                                    .font(.caption.weight(.semibold))
+                                Text("Open Settings → Always Allow")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .foregroundStyle(Theme.planned)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                    }
+                    .padding(.vertical, 4)
+                }
+
                 if geofenceService.authorizationStatus == .denied || geofenceService.authorizationStatus == .restricted {
                     Divider()
                         .foregroundStyle(Theme.outlineVariant.opacity(0.3))
