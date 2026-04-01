@@ -88,7 +88,7 @@ struct SettingsView: View {
 
     private var configHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("CONFIGURATION")
+            Text("SETUP")
                 .font(.system(size: 28, weight: .bold, design: .default))
                 .foregroundStyle(Theme.onSurface)
                 .tracking(2)

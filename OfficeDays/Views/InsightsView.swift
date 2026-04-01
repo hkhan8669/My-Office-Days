@@ -23,7 +23,7 @@ struct InsightsView: View {
                 .padding(.bottom, 40)
             }
             .background(Theme.surfaceGradient.ignoresSafeArea())
-            .navigationTitle("Geo Log")
+            .navigationTitle("Log")
             .navigationBarTitleDisplayMode(.large)
         }
         .sheet(isPresented: $showShareSheet) {
