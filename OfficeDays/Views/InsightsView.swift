@@ -9,6 +9,7 @@ struct InsightsView: View {
 
     @State private var showShareSheet = false
     @State private var csvContent = ""
+    @State private var cachedStreak = 0
 
     var body: some View {
         NavigationStack {
@@ -25,6 +26,7 @@ struct InsightsView: View {
             .background(Theme.surfaceGradient.ignoresSafeArea())
             .navigationTitle("Log")
             .navigationBarTitleDisplayMode(.large)
+            .onAppear { cachedStreak = computeStreak() }
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(text: csvContent)
@@ -105,7 +107,7 @@ struct InsightsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
             } else {
-                ForEach(Array(geoLogs.enumerated()), id: \.offset) { index, log in
+                ForEach(Array(geoLogs.enumerated()), id: \.element.persistentModelID) { index, log in
                     geoLogRow(log: log, isEven: index % 2 == 0)
                 }
             }
@@ -209,7 +211,7 @@ struct InsightsView: View {
         }
     }
 
-    private var currentStreak: Int {
+    private func computeStreak() -> Int {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let allDays = loadAllDays()
@@ -240,9 +242,10 @@ struct InsightsView: View {
         let currentYear = Calendar.current.component(.year, from: Date())
         var days: [AttendanceDay] = []
         for year in (currentYear - 2)...currentYear {
-            for q in QuarterHelper.allQuarters(for: year) {
-                days.append(contentsOf: viewModel.allDays(in: q))
-            }
+            let yearPeriod = PeriodHelper.yearInfo(
+                for: Calendar.current.date(from: DateComponents(year: year, month: 6, day: 15))!
+            )
+            days.append(contentsOf: viewModel.allDays(in: yearPeriod))
         }
         var seen = Set<String>()
         return days.filter { seen.insert($0.dateKey).inserted }
@@ -265,12 +268,12 @@ struct InsightsView: View {
                     .foregroundStyle(.white.opacity(0.65))
                     .tracking(1.3)
 
-                Text("\(currentStreak)")
+                Text("\(cachedStreak)")
                     .font(.system(size: 48, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
 
-                Text(currentStreak > 0 ? "consecutive office days" : "Start your streak!")
+                Text(cachedStreak > 0 ? "consecutive office days" : "Start your streak!")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.75))
             }
@@ -296,7 +299,7 @@ struct InsightsView: View {
                 )
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Current streak, \(currentStreak) consecutive office days")
+        .accessibilityLabel("Current streak, \(cachedStreak) consecutive office days")
     }
 
     private var frequentLocationCard: some View {

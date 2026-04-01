@@ -1,15 +1,25 @@
 import SwiftUI
 
-struct QuarterSummaryView: View {
+struct PeriodSummaryView: View {
     let viewModel: AttendanceViewModel
     @State private var selectedYear = Calendar.current.component(.year, from: Date())
 
-    private var quarters: [QuarterHelper.QuarterInfo] {
-        QuarterHelper.allQuarters(for: selectedYear)
+    private var trackingPeriod: TrackingPeriod { AppPreferences.trackingPeriod }
+
+    private var periods: [PeriodInfo] {
+        PeriodHelper.allPeriods(for: selectedYear)
     }
 
     private var yearTotal: Int {
-        quarters.reduce(0) { $0 + viewModel.officeDayCount(in: $1) }
+        periods.reduce(0) { $0 + viewModel.officeDayCount(in: $1) }
+    }
+
+    private var navigationTitle: String {
+        switch trackingPeriod {
+        case .monthly: "Months"
+        case .quarterly: "Quarters"
+        case .yearly: "Year"
+        }
     }
 
     var body: some View {
@@ -17,18 +27,20 @@ struct QuarterSummaryView: View {
             VStack(spacing: 20) {
                 yearSelector
 
-                ForEach(quarters, id: \.quarter) { quarter in
-                    quarterCard(quarter)
+                ForEach(periods, id: \.label) { period in
+                    periodCard(period)
                 }
 
-                yearTotalCard
+                if trackingPeriod != .yearly {
+                    yearTotalCard
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 40)
         }
         .background(Theme.surface.ignoresSafeArea())
-        .navigationTitle("Quarters")
+        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -72,16 +84,15 @@ struct QuarterSummaryView: View {
         .padding(.vertical, 4)
     }
 
-    // MARK: - Quarter Card
+    // MARK: - Period Card
 
-    private func quarterCard(_ quarter: QuarterHelper.QuarterInfo) -> some View {
-        let stats = viewModel.quarterStats(in: quarter)
+    private func periodCard(_ period: PeriodInfo) -> some View {
+        let stats = viewModel.periodStats(in: period)
         let count = stats.targetDays
-        let target = QuarterHelper.targetDaysPerQuarter
+        let target = PeriodHelper.targetDaysPerPeriod
         let delta = stats.delta
-        let progress = min(1.0, Double(count) / Double(target))
-        let isCurrentQuarter = QuarterHelper.quarter(for: Date()) == quarter.quarter
-            && Calendar.current.component(.year, from: Date()) == quarter.year
+        let progress = min(1.0, Double(count) / Double(max(1, target)))
+        let isCurrent = isCurrentPeriod(period)
 
         return VStack(alignment: .leading, spacing: 0) {
             // Section header with left accent border
@@ -90,13 +101,13 @@ struct QuarterSummaryView: View {
                     .fill(Theme.accent)
                     .frame(width: 4, height: 20)
 
-                Text(quarter.label.uppercased())
+                Text(period.label.uppercased())
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Theme.textTertiary)
                     .tracking(1.5)
                     .padding(.leading, 10)
 
-                if isCurrentQuarter {
+                if isCurrent {
                     Text("NOW")
                         .font(.system(size: 9, weight: .heavy))
                         .foregroundStyle(.white)
@@ -110,7 +121,7 @@ struct QuarterSummaryView: View {
 
                 Spacer()
 
-                Text(quarterDateRange(quarter))
+                Text(periodDateRange(period))
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.textTertiary)
             }
@@ -218,7 +229,7 @@ struct QuarterSummaryView: View {
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(Theme.accent)
                         .contentTransition(.numericText())
-                    Text("of \(QuarterHelper.targetDaysPerQuarter * 4) target days")
+                    Text("of \(PeriodHelper.targetDaysPerPeriod * PeriodHelper.periodsPerYear) target days")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.textTertiary)
                 }
@@ -226,8 +237,8 @@ struct QuarterSummaryView: View {
                 Spacer()
 
                 // Year progress ring
-                let yearTarget = Double(QuarterHelper.targetDaysPerQuarter * 4)
-                let yearProgress = min(1.0, Double(yearTotal) / yearTarget)
+                let yearTarget = Double(PeriodHelper.targetDaysPerPeriod * PeriodHelper.periodsPerYear)
+                let yearProgress = min(1.0, Double(yearTotal) / max(1, yearTarget))
 
                 ZStack {
                     Circle()
@@ -252,6 +263,11 @@ struct QuarterSummaryView: View {
 
     // MARK: - Helpers
 
+    private func isCurrentPeriod(_ period: PeriodInfo) -> Bool {
+        let current = PeriodHelper.currentPeriod()
+        return period.label == current.label
+    }
+
     private func deltaLabel(_ delta: Int) -> String {
         if delta > 0 { return "+\(delta) ahead" }
         if delta < 0 { return "\(delta) behind" }
@@ -264,7 +280,7 @@ struct QuarterSummaryView: View {
         return Theme.onTrack
     }
 
-    private func quarterDateRange(_ q: QuarterHelper.QuarterInfo) -> String {
-        "\(DateHelper.shortDateString(for: q.startDate)) \u{2013} \(DateHelper.shortDateString(for: q.endDate))"
+    private func periodDateRange(_ p: PeriodInfo) -> String {
+        "\(DateHelper.shortDateString(for: p.startDate)) \u{2013} \(DateHelper.shortDateString(for: p.endDate))"
     }
 }

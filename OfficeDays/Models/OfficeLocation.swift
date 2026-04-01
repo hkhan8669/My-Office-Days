@@ -47,11 +47,5 @@ final class OfficeLocation {
 
     static let defaultOffices: [(String, String, Double, Double)] = [
         ("Newark, DE (HQ)", "300 Continental Drive, Newark, DE 19713", 39.6685, -75.7506),
-        ("New Castle, DE", "New Castle, DE 19720", 39.6582, -75.5663),
-        ("Indianapolis, IN", "8425 Woodfield Crossing Blvd, Indianapolis, IN 46240", 39.9098, -86.1121),
-        ("Newton, MA", "95 Wells Ave, Newton, MA 02459", 42.3318, -71.2108),
-        ("Sterling, VA", "21000 Atlantic Blvd, Sterling, VA", 39.0066, -77.4291),
-        ("Reston, VA", "12061 Bluemont Way, Reston, VA", 38.9531, -77.3503),
-        ("Salt Lake City, UT", "175 S West Temple, Suite 600, Salt Lake City, UT 84101", 40.7641, -111.8961),
     ]
 }

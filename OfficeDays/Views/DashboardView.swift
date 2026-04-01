@@ -10,8 +10,8 @@ struct DashboardView: View {
 
     // MARK: - Computed Properties
 
-    private var quarter: QuarterHelper.QuarterInfo {
-        QuarterHelper.quarterInfo(for: Date())
+    private var period: PeriodInfo {
+        PeriodHelper.currentPeriod()
     }
 
     private var snap: AttendanceViewModel.QuarterSnapshot {
@@ -23,7 +23,7 @@ struct DashboardView: View {
     }
 
     private var target: Int {
-        QuarterHelper.targetDaysPerQuarter
+        PeriodHelper.targetDaysPerPeriod
     }
 
     private var daysRemaining: Int {
@@ -31,15 +31,15 @@ struct DashboardView: View {
     }
 
     private var weeksRemaining: Int {
-        QuarterHelper.weeksRemaining(in: quarter, from: Date())
+        PeriodHelper.weeksRemaining(in: period, from: Date())
     }
 
     private var weekdaysRemaining: Int {
-        QuarterHelper.weekdaysRemaining(in: quarter, from: Date())
+        PeriodHelper.weekdaysRemaining(in: period, from: Date())
     }
 
-    private var pace: QuarterHelper.PaceStatus {
-        QuarterHelper.paceStatus(officeDays: creditedDays, in: quarter, asOf: Date())
+    private var pace: PeriodHelper.PaceStatus {
+        PeriodHelper.paceStatus(officeDays: creditedDays, in: period, asOf: Date())
     }
 
     private var progress: Double {
@@ -112,7 +112,7 @@ struct DashboardView: View {
 
     private var progressRingSection: some View {
         VStack(spacing: 8) {
-            Text("QUARTER PROGRESS")
+            Text(AppPreferences.trackingPeriod.progressHeader)
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Theme.textTertiary)
                 .tracking(1.5)
@@ -224,10 +224,10 @@ struct DashboardView: View {
             .padding(.top, 4)
 
             NavigationLink {
-                QuarterSummaryView(viewModel: viewModel)
+                PeriodSummaryView(viewModel: viewModel)
             } label: {
                 HStack(spacing: 4) {
-                    Text("View Quarters")
+                    Text("View \(AppPreferences.trackingPeriod == .yearly ? "Year" : "\(AppPreferences.trackingPeriod.shortLabel)s")")
                         .font(.system(size: 13, weight: .semibold))
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
@@ -239,7 +239,7 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Quarter progress. \(creditedDays) of \(target) credited office days. \(daysRemaining) remaining. \(pace.label).")
+        .accessibilityLabel("\(AppPreferences.trackingPeriod.shortLabel) progress. \(creditedDays) of \(target) credited office days. \(daysRemaining) remaining. \(pace.label).")
     }
 
     // MARK: - Current Status
@@ -374,7 +374,7 @@ struct DashboardView: View {
                         Image(systemName: "calendar.badge.plus")
                             .font(.title2)
                             .foregroundStyle(Theme.textTertiary)
-                        Text("No logged days yet this quarter")
+                        Text("No logged days yet this \(AppPreferences.trackingPeriod.shortLabel.lowercased())")
                             .font(.subheadline)
                             .foregroundStyle(Theme.textTertiary)
                     }
@@ -404,7 +404,7 @@ struct DashboardView: View {
         for offset in 0..<14 {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
             guard AppPreferences.isWorkDay(date) else { continue } // work days only
-            guard date >= quarter.startDate else { break }
+            guard date >= period.startDate else { break }
 
             if let day = viewModel.attendanceDay(for: date) {
                 if day.dayType != .remote {
@@ -463,7 +463,7 @@ struct DashboardView: View {
                 title: daysRemaining > 0 ? "Required Pace" : "Target Complete",
                 subtitle: daysRemaining > 0
                     ? String(format: "%.1f days per week needed across %d remaining weeks.", daysPerWeek, weeksRemaining)
-                    : "You have met the \(target)-day target for \(quarter.label).",
+                    : "You have met the \(target)-day target for \(period.label).",
                 color: daysRemaining > 0 ? Theme.accent : Theme.vacation
             )
         }

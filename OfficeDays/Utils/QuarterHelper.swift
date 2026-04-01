@@ -1,18 +1,84 @@
 import Foundation
 
+// MARK: - Tracking Period
+
+enum TrackingPeriod: String, CaseIterable, Identifiable {
+    case monthly
+    case quarterly
+    case yearly
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .monthly: "Monthly"
+        case .quarterly: "Quarterly"
+        case .yearly: "Yearly"
+        }
+    }
+
+    var shortLabel: String {
+        switch self {
+        case .monthly: "Month"
+        case .quarterly: "Quarter"
+        case .yearly: "Year"
+        }
+    }
+
+    var progressHeader: String {
+        switch self {
+        case .monthly: "MONTH PROGRESS"
+        case .quarterly: "QUARTER PROGRESS"
+        case .yearly: "YEAR PROGRESS"
+        }
+    }
+}
+
+// MARK: - App Preferences
+
 enum AppPreferences {
     private static let targetDaysKey = "targetDaysPerQuarter"
     private static let trackingEnabledKey = "trackingEnabled"
+    private static let trackingPeriodKey = "trackingPeriod"
     static let defaultTargetDaysPerQuarter = 39
 
-    static var targetDaysPerQuarter: Int {
-        let storedValue = UserDefaults.standard.integer(forKey: targetDaysKey)
-        return storedValue > 0 ? storedValue : defaultTargetDaysPerQuarter
+    // MARK: Tracking Period
+
+    static var trackingPeriod: TrackingPeriod {
+        if let raw = UserDefaults.standard.string(forKey: trackingPeriodKey),
+           let period = TrackingPeriod(rawValue: raw) {
+            return period
+        }
+        return .quarterly
     }
 
-    static func setTargetDaysPerQuarter(_ days: Int) {
+    static func setTrackingPeriod(_ period: TrackingPeriod) {
+        UserDefaults.standard.set(period.rawValue, forKey: trackingPeriodKey)
+    }
+
+    // MARK: Target Days
+
+    static var targetDaysPerPeriod: Int {
+        let storedValue = UserDefaults.standard.integer(forKey: targetDaysKey)
+        return storedValue > 0 ? storedValue : defaultTargetForPeriod(trackingPeriod)
+    }
+
+    /// Sensible default target for each period type
+    static func defaultTargetForPeriod(_ period: TrackingPeriod) -> Int {
+        switch period {
+        case .monthly: 13
+        case .quarterly: 39
+        case .yearly: 156
+        }
+    }
+
+    static func setTargetDaysPerPeriod(_ days: Int) {
         UserDefaults.standard.set(max(1, days), forKey: targetDaysKey)
     }
+
+    /// Legacy accessor – many call sites still use this name
+    static var targetDaysPerQuarter: Int { targetDaysPerPeriod }
+    static func setTargetDaysPerQuarter(_ days: Int) { setTargetDaysPerPeriod(days) }
 
     static var trackingEnabled: Bool {
         if UserDefaults.standard.object(forKey: trackingEnabledKey) == nil {
@@ -109,34 +175,72 @@ enum AppPreferences {
 
 }
 
-struct QuarterHelper {
-    static let defaultTargetDaysPerQuarter = AppPreferences.defaultTargetDaysPerQuarter
-    static var targetDaysPerQuarter: Int { AppPreferences.targetDaysPerQuarter }
+// MARK: - Period Info
 
-    struct QuarterInfo {
-        let quarter: Int // 1-4
-        let year: Int
-        let startDate: Date
-        let endDate: Date
-        let label: String // "Q1 2026"
+struct PeriodInfo {
+    let index: Int      // 1-4 for quarters, 1-12 for months, 1 for year
+    let year: Int
+    let startDate: Date
+    let endDate: Date
+    let label: String   // "Q1 2026", "Jan 2026", "2026"
 
-        var weekdaysInQuarter: Int {
-            var count = 0
-            var current = startDate
-            while current <= endDate {
-                if AppPreferences.isWorkDay(current) { count += 1 }
-                current = Calendar.current.date(byAdding: .day, value: 1, to: current)!
-            }
-            return count
+    var workDaysInPeriod: Int {
+        var count = 0
+        var current = startDate
+        while current <= endDate {
+            if AppPreferences.isWorkDay(current) { count += 1 }
+            current = Calendar.current.date(byAdding: .day, value: 1, to: current)!
+        }
+        return count
+    }
+
+    /// Legacy accessors for backwards compatibility
+    var weekdaysInQuarter: Int { workDaysInPeriod }
+    var quarter: Int { index }
+}
+
+// MARK: - Period Helper
+
+struct PeriodHelper {
+    static var targetDaysPerPeriod: Int { AppPreferences.targetDaysPerPeriod }
+
+    // MARK: Current Period
+
+    static func currentPeriod(for date: Date = Date()) -> PeriodInfo {
+        switch AppPreferences.trackingPeriod {
+        case .monthly: return monthInfo(for: date)
+        case .quarterly: return quarterInfo(for: date)
+        case .yearly: return yearInfo(for: date)
         }
     }
+
+    // MARK: All Periods for a Year
+
+    static func allPeriods(for year: Int) -> [PeriodInfo] {
+        switch AppPreferences.trackingPeriod {
+        case .monthly: return allMonths(for: year)
+        case .quarterly: return allQuarters(for: year)
+        case .yearly: return [yearInfo(for: Calendar.current.date(from: DateComponents(year: year, month: 6, day: 15))!)]
+        }
+    }
+
+    /// Number of periods in a year for the current tracking mode
+    static var periodsPerYear: Int {
+        switch AppPreferences.trackingPeriod {
+        case .monthly: 12
+        case .quarterly: 4
+        case .yearly: 1
+        }
+    }
+
+    // MARK: Quarter-specific (kept for backwards compat)
 
     static func quarter(for date: Date) -> Int {
         let month = Calendar.current.component(.month, from: date)
         return ((month - 1) / 3) + 1
     }
 
-    static func quarterInfo(for date: Date) -> QuarterInfo {
+    static func quarterInfo(for date: Date) -> PeriodInfo {
         let cal = Calendar.current
         let year = cal.component(.year, from: date)
         let q = quarter(for: date)
@@ -147,8 +251,8 @@ struct QuarterHelper {
         let endComponents = DateComponents(year: year, month: endMonth + 1, day: 1)
         let end = cal.date(byAdding: .day, value: -1, to: cal.date(from: endComponents)!)!
 
-        return QuarterInfo(
-            quarter: q,
+        return PeriodInfo(
+            index: q,
             year: year,
             startDate: start,
             endDate: end,
@@ -156,31 +260,82 @@ struct QuarterHelper {
         )
     }
 
-    static func allQuarters(for year: Int) -> [QuarterInfo] {
+    static func allQuarters(for year: Int) -> [PeriodInfo] {
         (1...4).map { q in
             let date = Calendar.current.date(from: DateComponents(year: year, month: (q - 1) * 3 + 1, day: 15))!
             return quarterInfo(for: date)
         }
     }
 
-    static func weekdaysRemaining(in quarter: QuarterInfo, from date: Date) -> Int {
+    // MARK: Month-specific
+
+    static func monthInfo(for date: Date) -> PeriodInfo {
+        let cal = Calendar.current
+        let year = cal.component(.year, from: date)
+        let month = cal.component(.month, from: date)
+
+        let start = cal.date(from: DateComponents(year: year, month: month, day: 1))!
+        let nextMonth = cal.date(byAdding: .month, value: 1, to: start)!
+        let end = cal.date(byAdding: .day, value: -1, to: nextMonth)!
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+
+        return PeriodInfo(
+            index: month,
+            year: year,
+            startDate: start,
+            endDate: end,
+            label: formatter.string(from: start)
+        )
+    }
+
+    static func allMonths(for year: Int) -> [PeriodInfo] {
+        (1...12).map { m in
+            let date = Calendar.current.date(from: DateComponents(year: year, month: m, day: 15))!
+            return monthInfo(for: date)
+        }
+    }
+
+    // MARK: Year-specific
+
+    static func yearInfo(for date: Date) -> PeriodInfo {
+        let cal = Calendar.current
+        let year = cal.component(.year, from: date)
+        let start = cal.date(from: DateComponents(year: year, month: 1, day: 1))!
+        let end = cal.date(from: DateComponents(year: year, month: 12, day: 31))!
+
+        return PeriodInfo(
+            index: 1,
+            year: year,
+            startDate: start,
+            endDate: end,
+            label: "\(year)"
+        )
+    }
+
+    // MARK: Remaining Work Days
+
+    static func weekdaysRemaining(in period: PeriodInfo, from date: Date) -> Int {
         let cal = Calendar.current
         let today = cal.startOfDay(for: date)
-        guard today <= quarter.endDate else { return 0 }
-        let start = max(today, quarter.startDate)
+        guard today <= period.endDate else { return 0 }
+        let start = max(today, period.startDate)
         var count = 0
         var current = start
-        while current <= quarter.endDate {
+        while current <= period.endDate {
             if AppPreferences.isWorkDay(current) { count += 1 }
             current = cal.date(byAdding: .day, value: 1, to: current)!
         }
         return count
     }
 
-    static func weeksRemaining(in quarter: QuarterInfo, from date: Date) -> Int {
-        let days = weekdaysRemaining(in: quarter, from: date)
+    static func weeksRemaining(in period: PeriodInfo, from date: Date) -> Int {
+        let days = weekdaysRemaining(in: period, from: date)
         return (days + 4) / 5
     }
+
+    // MARK: Pace
 
     enum PaceStatus {
         case complete, onTrack, tight, atRisk, offTrack
@@ -206,11 +361,11 @@ struct QuarterHelper {
         }
     }
 
-    static func paceStatus(officeDays: Int, in quarter: QuarterInfo, asOf date: Date) -> PaceStatus {
-        let remaining = max(0, targetDaysPerQuarter - officeDays)
+    static func paceStatus(officeDays: Int, in period: PeriodInfo, asOf date: Date) -> PaceStatus {
+        let remaining = max(0, targetDaysPerPeriod - officeDays)
         if remaining == 0 { return .complete }
 
-        let weeks = weeksRemaining(in: quarter, from: date)
+        let weeks = weeksRemaining(in: period, from: date)
         guard weeks > 0 else {
             return remaining > 0 ? .offTrack : .complete
         }
@@ -220,5 +375,41 @@ struct QuarterHelper {
         if daysPerWeek <= 4.0 { return .tight }
         if daysPerWeek <= 5.0 { return .atRisk }
         return .offTrack
+    }
+}
+
+// MARK: - Legacy QuarterHelper (thin wrapper)
+
+/// Backwards-compatible wrapper. New code should use `PeriodHelper` directly.
+struct QuarterHelper {
+    static let defaultTargetDaysPerQuarter = AppPreferences.defaultTargetDaysPerQuarter
+    static var targetDaysPerQuarter: Int { AppPreferences.targetDaysPerPeriod }
+
+    typealias QuarterInfo = PeriodInfo
+
+    static func quarter(for date: Date) -> Int {
+        PeriodHelper.quarter(for: date)
+    }
+
+    static func quarterInfo(for date: Date) -> PeriodInfo {
+        PeriodHelper.quarterInfo(for: date)
+    }
+
+    static func allQuarters(for year: Int) -> [PeriodInfo] {
+        PeriodHelper.allQuarters(for: year)
+    }
+
+    static func weekdaysRemaining(in quarter: PeriodInfo, from date: Date) -> Int {
+        PeriodHelper.weekdaysRemaining(in: quarter, from: date)
+    }
+
+    static func weeksRemaining(in quarter: PeriodInfo, from date: Date) -> Int {
+        PeriodHelper.weeksRemaining(in: quarter, from: date)
+    }
+
+    typealias PaceStatus = PeriodHelper.PaceStatus
+
+    static func paceStatus(officeDays: Int, in quarter: PeriodInfo, asOf date: Date) -> PaceStatus {
+        PeriodHelper.paceStatus(officeDays: officeDays, in: quarter, asOf: date)
     }
 }

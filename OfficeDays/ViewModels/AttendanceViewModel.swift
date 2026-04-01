@@ -25,9 +25,15 @@ final class AttendanceViewModel {
         /// Future credited days (vacation, holiday, credit, travel scheduled after today)
         var futureCreditedDays: Int = 0
 
-        /// Credited days up to and including today
+        /// Credited days up to and including today, respecting user preferences
         var targetDays: Int {
-            officeDays + officeCreditDays + travelDays + holidayDays + vacationDays
+            let types = AppPreferences.dayTypesCountingTowardTarget
+            var total = officeDays // office always counts
+            if types.contains("freeDay") { total += officeCreditDays }
+            if types.contains("travel") { total += travelDays }
+            if types.contains("holiday") { total += holidayDays }
+            if types.contains("vacation") { total += vacationDays }
+            return total
         }
 
         /// Total credited including future
@@ -45,10 +51,16 @@ final class AttendanceViewModel {
         let travelDays: Int
 
         var targetDays: Int {
-            officeDays + officeCreditDays + travelDays + holidayDays + vacationDays
+            let types = AppPreferences.dayTypesCountingTowardTarget
+            var total = officeDays
+            if types.contains("freeDay") { total += officeCreditDays }
+            if types.contains("travel") { total += travelDays }
+            if types.contains("holiday") { total += holidayDays }
+            if types.contains("vacation") { total += vacationDays }
+            return total
         }
 
-        var delta: Int { targetDays - QuarterHelper.targetDaysPerQuarter }
+        var delta: Int { targetDays - PeriodHelper.targetDaysPerPeriod }
     }
 
     private(set) var currentQuarterSnapshot = QuarterSnapshot()
@@ -56,8 +68,8 @@ final class AttendanceViewModel {
     private var cachedMonthKey = ""
     var lastErrorMessage: String?
 
-    var targetDaysPerQuarter: Int {
-        QuarterHelper.targetDaysPerQuarter
+    var targetDaysPerPeriod: Int {
+        PeriodHelper.targetDaysPerPeriod
     }
 
     init(modelContext: ModelContext) {
@@ -87,7 +99,7 @@ final class AttendanceViewModel {
 
     func ensureHolidays(for year: Int) {
         var inserted = false
-        for holiday in Holiday.companyHolidays(for: year) {
+        for holiday in Holiday.federalHolidays(for: year) {
             if let existingDay = attendanceDay(for: holiday.date) {
                 if existingDay.dayType == .holiday || !existingDay.isManualOverride {
                     existingDay.dayType = .holiday
@@ -116,15 +128,15 @@ final class AttendanceViewModel {
     }
 
     func refreshSnapshot() {
-        let quarter = QuarterHelper.quarterInfo(for: Date())
-        let startKey = AttendanceDay.key(for: quarter.startDate)
-        let endKey = AttendanceDay.key(for: quarter.endDate)
+        let period = PeriodHelper.currentPeriod()
+        let startKey = AttendanceDay.key(for: period.startDate)
+        let endKey = AttendanceDay.key(for: period.endDate)
         let descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
                 $0.dateKey >= startKey && $0.dateKey <= endKey
             }
         )
-        let days = fetch(descriptor, userMessage: "Unable to refresh the current quarter.")
+        let days = fetch(descriptor, userMessage: "Unable to refresh the current period.")
 
         let todayKey = AttendanceDay.key(for: Date())
         var snapshot = QuarterSnapshot()
@@ -144,7 +156,10 @@ final class AttendanceViewModel {
                 }
             case .vacation, .holiday, .freeDay, .travel:
                 if isFuture {
-                    snapshot.futureCreditedDays += 1
+                    // Only count future days as upcoming credit if the type counts toward target
+                    if day.dayType.countsTowardTarget {
+                        snapshot.futureCreditedDays += 1
+                    }
                 } else {
                     switch day.dayType {
                     case .vacation: snapshot.vacationDays += 1
@@ -206,9 +221,9 @@ final class AttendanceViewModel {
         attendanceDay(for: date)?.holidayName
     }
 
-    func officeDays(in quarter: QuarterHelper.QuarterInfo) -> [AttendanceDay] {
+    func officeDays(in period: PeriodInfo) -> [AttendanceDay] {
         let officeType = DayType.office.rawValue
-        let (startKey, endKey) = quarterBounds(for: quarter)
+        let (startKey, endKey) = periodBounds(for: period)
         let descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
                 $0.dateKey >= startKey && $0.dateKey <= endKey && $0.dayTypeRaw == officeType
@@ -217,22 +232,22 @@ final class AttendanceViewModel {
         return fetch(descriptor, userMessage: "Unable to load office-day totals.")
     }
 
-    func allDays(in quarter: QuarterHelper.QuarterInfo) -> [AttendanceDay] {
-        let (startKey, endKey) = quarterBounds(for: quarter)
+    func allDays(in period: PeriodInfo) -> [AttendanceDay] {
+        let (startKey, endKey) = periodBounds(for: period)
         let descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
                 $0.dateKey >= startKey && $0.dateKey <= endKey
             }
         )
-        return fetch(descriptor, userMessage: "Unable to load quarter details.")
+        return fetch(descriptor, userMessage: "Unable to load period details.")
     }
 
-    func officeDayCount(in quarter: QuarterHelper.QuarterInfo) -> Int {
-        quarterStats(in: quarter).targetDays
+    func officeDayCount(in period: PeriodInfo) -> Int {
+        periodStats(in: period).targetDays
     }
 
-    func quarterStats(in quarter: QuarterHelper.QuarterInfo) -> QuarterStats {
-        let days = allDays(in: quarter)
+    func periodStats(in period: PeriodInfo) -> QuarterStats {
+        let days = allDays(in: period)
         var officeDays = 0
         var plannedDays = 0
         var vacationDays = 0
@@ -262,8 +277,8 @@ final class AttendanceViewModel {
         )
     }
 
-    func dayCount(of type: DayType, in quarter: QuarterHelper.QuarterInfo) -> Int {
-        let (startKey, endKey) = quarterBounds(for: quarter)
+    func dayCount(of type: DayType, in period: PeriodInfo) -> Int {
+        let (startKey, endKey) = periodBounds(for: period)
         let typeRaw = type.rawValue
         let descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
@@ -273,8 +288,8 @@ final class AttendanceViewModel {
         return fetchCount(descriptor, userMessage: "Unable to count quarter days.")
     }
 
-    func delta(in quarter: QuarterHelper.QuarterInfo) -> Int {
-        officeDayCount(in: quarter) - QuarterHelper.targetDaysPerQuarter
+    func delta(in period: PeriodInfo) -> Int {
+        officeDayCount(in: period) - PeriodHelper.targetDaysPerPeriod
     }
 
     func offices() -> [OfficeLocation] {
@@ -376,6 +391,22 @@ final class AttendanceViewModel {
         saveAndRefresh(userMessage: "Unable to delete the holiday.")
     }
 
+    /// Remove all auto-seeded holiday entries (non-manual-override holidays).
+    func removeAllAutoHolidays() {
+        let holidayType = DayType.holiday.rawValue
+        let descriptor = FetchDescriptor<AttendanceDay>(
+            predicate: #Predicate {
+                $0.dayTypeRaw == holidayType && $0.isManualOverride == false
+            }
+        )
+        let holidays = fetch(descriptor, userMessage: "Unable to load holidays for removal.")
+        guard !holidays.isEmpty else { return }
+        for day in holidays {
+            modelContext.delete(day)
+        }
+        saveAndRefresh(userMessage: "Unable to remove holidays.")
+    }
+
     func addOffice(name: String, address: String, latitude: Double, longitude: Double, radiusInFeet: Double) {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
@@ -419,8 +450,8 @@ final class AttendanceViewModel {
         saveChanges("Unable to delete the office location.")
     }
 
-    func setTargetDaysPerQuarter(_ days: Int) {
-        AppPreferences.setTargetDaysPerQuarter(days)
+    func setTargetDaysPerPeriod(_ days: Int) {
+        AppPreferences.setTargetDaysPerPeriod(days)
         refreshSnapshot()
     }
 
@@ -453,6 +484,7 @@ final class AttendanceViewModel {
 
         if changed {
             saveChanges("Unable to resolve older planned days.")
+            invalidateMonthCache()
         }
     }
 
@@ -502,12 +534,14 @@ final class AttendanceViewModel {
         }
 
         lines.append("")
-        lines.append("Quarter,Credited Days,Target,Delta")
-        for quarter in QuarterHelper.allQuarters(for: year) {
-            let count = officeDayCount(in: quarter)
-            let delta = count - QuarterHelper.targetDaysPerQuarter
+        let periodLabel = AppPreferences.trackingPeriod.shortLabel
+        lines.append("\(periodLabel),Credited Days,Target,Delta")
+        for period in PeriodHelper.allPeriods(for: year) {
+            let count = officeDayCount(in: period)
+            let target = PeriodHelper.targetDaysPerPeriod
+            let delta = count - target
             let sign = delta >= 0 ? "+" : ""
-            lines.append("\(quarter.label),\(count),\(QuarterHelper.targetDaysPerQuarter),\(sign)\(delta)")
+            lines.append("\(period.label),\(count),\(target),\(sign)\(delta)")
         }
 
         return lines.joined(separator: "\n")
@@ -529,34 +563,6 @@ final class AttendanceViewModel {
         if inserted {
             saveAndRefresh(userMessage: "Unable to import the selected office days.")
         }
-    }
-
-    // MARK: - Velocity Helpers
-
-    func futureHolidaysInQuarter() -> Int {
-        let quarter = QuarterHelper.quarterInfo(for: Date())
-        let todayKey = AttendanceDay.key(for: Calendar.current.startOfDay(for: Date()))
-        let endKey = AttendanceDay.key(for: quarter.endDate)
-        let holidayType = DayType.holiday.rawValue
-        let descriptor = FetchDescriptor<AttendanceDay>(
-            predicate: #Predicate {
-                $0.dayTypeRaw == holidayType && $0.dateKey >= todayKey && $0.dateKey <= endKey
-            }
-        )
-        return fetchCount(descriptor, userMessage: "Unable to count remaining holidays.")
-    }
-
-    func futureVacationsInQuarter() -> Int {
-        let quarter = QuarterHelper.quarterInfo(for: Date())
-        let todayKey = AttendanceDay.key(for: Calendar.current.startOfDay(for: Date()))
-        let endKey = AttendanceDay.key(for: quarter.endDate)
-        let vacationType = DayType.vacation.rawValue
-        let descriptor = FetchDescriptor<AttendanceDay>(
-            predicate: #Predicate {
-                $0.dayTypeRaw == vacationType && $0.dateKey >= todayKey && $0.dateKey <= endKey
-            }
-        )
-        return fetchCount(descriptor, userMessage: "Unable to count remaining vacations.")
     }
 
     // MARK: - Office Management
@@ -687,7 +693,7 @@ final class AttendanceViewModel {
         lastErrorMessage = userMessage
     }
 
-    private func quarterBounds(for quarter: QuarterHelper.QuarterInfo) -> (String, String) {
-        (AttendanceDay.key(for: quarter.startDate), AttendanceDay.key(for: quarter.endDate))
+    private func periodBounds(for period: PeriodInfo) -> (String, String) {
+        (AttendanceDay.key(for: period.startDate), AttendanceDay.key(for: period.endDate))
     }
 }

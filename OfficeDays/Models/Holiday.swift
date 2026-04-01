@@ -16,7 +16,7 @@ final class Holiday {
         self.year = Calendar.current.component(.year, from: normalizedDate)
     }
 
-    static func companyHolidays(for year: Int, calendar: Calendar = .current) -> [(date: Date, name: String)] {
+    static func federalHolidays(for year: Int, calendar: Calendar = .current) -> [(date: Date, name: String)] {
         let thanksgiving = nthWeekday(4, weekday: 5, month: 11, year: year, calendar: calendar)
         let easterSunday = easterSunday(year: year, calendar: calendar)
 
@@ -35,6 +35,30 @@ final class Holiday {
             (calendar.date(byAdding: .day, value: 1, to: thanksgiving)!, "Day after Thanksgiving"),
             (observedDate(for: date(year: year, month: 12, day: 25, calendar: calendar), calendar: calendar), "Christmas"),
         ]
+    }
+
+    /// Legacy accessor
+    static func companyHolidays(for year: Int, calendar: Calendar = .current) -> [(date: Date, name: String)] {
+        federalHolidays(for: year, calendar: calendar)
+    }
+
+    private static func easterSunday(year: Int, calendar: Calendar) -> Date {
+        let a = year % 19
+        let b = year / 100
+        let c = year % 100
+        let d = b / 4
+        let e = b % 4
+        let f = (b + 8) / 25
+        let g = (b - f + 1) / 3
+        let h = (19 * a + b - d - g + 15) % 30
+        let i = c / 4
+        let k = c % 4
+        let l = (32 + 2 * e + 2 * i - h - k) % 7
+        let m = (a + 11 * h + 22 * l) / 451
+        let month = (h + l - 7 * m + 114) / 31
+        let day = ((h + l - 7 * m + 114) % 31) + 1
+
+        return date(year: year, month: month, day: day, calendar: calendar)
     }
 
     static func date(year: Int, month: Int, day: Int, calendar: Calendar = .current) -> Date {
@@ -86,22 +110,4 @@ final class Holiday {
         return calendar.startOfDay(for: current)
     }
 
-    private static func easterSunday(year: Int, calendar: Calendar) -> Date {
-        let a = year % 19
-        let b = year / 100
-        let c = year % 100
-        let d = b / 4
-        let e = b % 4
-        let f = (b + 8) / 25
-        let g = (b - f + 1) / 3
-        let h = (19 * a + b - d - g + 15) % 30
-        let i = c / 4
-        let k = c % 4
-        let l = (32 + 2 * e + 2 * i - h - k) % 7
-        let m = (a + 11 * h + 22 * l) / 451
-        let month = (h + l - 7 * m + 114) / 31
-        let day = ((h + l - 7 * m + 114) % 31) + 1
-
-        return date(year: year, month: month, day: day, calendar: calendar)
-    }
 }

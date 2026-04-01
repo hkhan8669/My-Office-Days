@@ -9,7 +9,8 @@ struct SettingsView: View {
     @State private var showExportShare = false
     @State private var csvContent = ""
     @State private var exportYear = Calendar.current.component(.year, from: Date())
-    @State private var targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
+    @State private var trackingPeriod = AppPreferences.trackingPeriod
+    @State private var targetDaysPerPeriod = PeriodHelper.targetDaysPerPeriod
     @State private var nudgeWeekday = AppPreferences.nudgeWeekday
     @State private var nudgeTime = Self.nudgeDate()
     @State private var selectedWorkDays: Set<Int> = AppPreferences.workDays
@@ -95,7 +96,8 @@ struct SettingsView: View {
             AddOfficeSheet(viewModel: viewModel, geofenceService: geofenceService)
         }
         .onAppear {
-            targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
+            trackingPeriod = AppPreferences.trackingPeriod
+            targetDaysPerPeriod = PeriodHelper.targetDaysPerPeriod
             nudgeWeekday = AppPreferences.nudgeWeekday
             nudgeTime = Self.nudgeDate()
             selectedWorkDays = AppPreferences.workDays
@@ -503,11 +505,64 @@ struct SettingsView: View {
 
     // MARK: - Goals Section
 
+    private var targetMin: Int {
+        switch trackingPeriod {
+        case .monthly: 5
+        case .quarterly: 10
+        case .yearly: 40
+        }
+    }
+
+    private var targetMax: Int {
+        switch trackingPeriod {
+        case .monthly: 25
+        case .quarterly: 70
+        case .yearly: 260
+        }
+    }
+
     private var goalsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("QUARTERLY GOALS")
+            sectionHeader("GOALS")
 
             VStack(spacing: 0) {
+                // Tracking period picker
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Theme.accent.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tracking Period")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.onSurface)
+                        Text("How you measure your attendance")
+                            .font(.caption)
+                            .foregroundStyle(Theme.onSurfaceVariant)
+                    }
+
+                    Spacer()
+
+                    Picker("Period", selection: $trackingPeriod) {
+                        ForEach(TrackingPeriod.allCases) { period in
+                            Text(period.label).tag(period)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.accent)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+
+                Divider()
+                    .padding(.leading, 66)
+
+                // Target stepper
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
@@ -519,10 +574,10 @@ struct SettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Quarterly Target")
+                        Text("\(trackingPeriod.label) Target")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.onSurface)
-                        Text("Days required per quarter")
+                        Text("Days required per \(trackingPeriod.shortLabel.lowercased())")
                             .font(.caption)
                             .foregroundStyle(Theme.onSurfaceVariant)
                     }
@@ -531,39 +586,39 @@ struct SettingsView: View {
 
                     HStack(spacing: 12) {
                         Button {
-                            if targetDaysPerQuarter > 20 {
-                                targetDaysPerQuarter -= 1
+                            if targetDaysPerPeriod > targetMin {
+                                targetDaysPerPeriod -= 1
                             }
                         } label: {
                             Image(systemName: "minus")
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(targetDaysPerQuarter > 20 ? Theme.accent : Theme.outline)
+                                .foregroundStyle(targetDaysPerPeriod > targetMin ? Theme.accent : Theme.outline)
                                 .frame(width: 32, height: 32)
                                 .background(Theme.surfaceContainer)
                                 .clipShape(Circle())
                         }
                         .buttonStyle(PressableButtonStyle())
-                        .disabled(targetDaysPerQuarter <= 20)
+                        .disabled(targetDaysPerPeriod <= targetMin)
 
-                        Text("\(targetDaysPerQuarter)")
+                        Text("\(targetDaysPerPeriod)")
                             .font(.system(.title3, design: .monospaced).weight(.bold))
                             .foregroundStyle(Theme.onSurface)
                             .frame(minWidth: 36)
 
                         Button {
-                            if targetDaysPerQuarter < 60 {
-                                targetDaysPerQuarter += 1
+                            if targetDaysPerPeriod < targetMax {
+                                targetDaysPerPeriod += 1
                             }
                         } label: {
                             Image(systemName: "plus")
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(targetDaysPerQuarter < 60 ? Theme.accent : Theme.outline)
+                                .foregroundStyle(targetDaysPerPeriod < targetMax ? Theme.accent : Theme.outline)
                                 .frame(width: 32, height: 32)
                                 .background(Theme.surfaceContainer)
                                 .clipShape(Circle())
                         }
                         .buttonStyle(PressableButtonStyle())
-                        .disabled(targetDaysPerQuarter >= 60)
+                        .disabled(targetDaysPerPeriod >= targetMax)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -578,8 +633,15 @@ struct SettingsView: View {
                     .stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5)
             )
         }
-        .onChange(of: targetDaysPerQuarter) { _, newValue in
-            viewModel.setTargetDaysPerQuarter(newValue)
+        .onChange(of: trackingPeriod) { _, newValue in
+            AppPreferences.setTrackingPeriod(newValue)
+            // Reset target to sensible default for the new period
+            let newTarget = AppPreferences.defaultTargetForPeriod(newValue)
+            targetDaysPerPeriod = newTarget
+            viewModel.setTargetDaysPerPeriod(newTarget)
+        }
+        .onChange(of: targetDaysPerPeriod) { _, newValue in
+            viewModel.setTargetDaysPerPeriod(newValue)
         }
     }
 
@@ -623,6 +685,7 @@ struct SettingsView: View {
                                 selectedWorkDays.insert(weekday)
                             }
                             AppPreferences.setWorkDays(selectedWorkDays)
+                            viewModel.invalidateMonthCache()
                             viewModel.refreshSnapshot()
                         } label: {
                             Text(Self.weekdayLabels[i])
@@ -731,7 +794,7 @@ struct SettingsView: View {
                         Text("Weekly Nudge")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.onSurface)
-                        Text("Recurring reminder to stay on track with your quarterly target.")
+                        Text("Recurring reminder to stay on track with your \(AppPreferences.trackingPeriod.shortLabel.lowercased()) target.")
                             .font(.caption)
                             .foregroundStyle(Theme.onSurfaceVariant)
                             .fixedSize(horizontal: false, vertical: true)
@@ -890,6 +953,17 @@ struct SettingsView: View {
                         .labelsHidden()
                         .onChange(of: holidaysEnabled) { _, newValue in
                             AppPreferences.setHolidaysEnabled(newValue)
+                            if newValue {
+                                let currentYear = Calendar.current.component(.year, from: Date())
+                                for year in (currentYear - 1)...(currentYear + 2) {
+                                    viewModel.ensureHolidays(for: year)
+                                }
+                                currentYearHolidays = viewModel.holidays(for: currentYear)
+                            } else {
+                                viewModel.removeAllAutoHolidays()
+                                let currentYear = Calendar.current.component(.year, from: Date())
+                                currentYearHolidays = viewModel.holidays(for: currentYear)
+                            }
                         }
                 }
                 .padding(.horizontal, 16)
@@ -1037,7 +1111,7 @@ struct SettingsView: View {
                 Divider()
                     .foregroundStyle(Theme.outlineVariant.opacity(0.3))
                     .padding(.leading, 16)
-                infoRow("Quarterly Target", "\(QuarterHelper.targetDaysPerQuarter) days")
+                infoRow("\(AppPreferences.trackingPeriod.label) Target", "\(PeriodHelper.targetDaysPerPeriod) days")
             }
             .background(
                 RoundedRectangle(cornerRadius: 14)
@@ -1515,7 +1589,11 @@ private struct EditOfficeSheet: View {
             office.longitude = selected.placemark.coordinate.longitude
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            viewModel.lastErrorMessage = "Unable to save office changes."
+        }
         dismiss()
     }
 }
