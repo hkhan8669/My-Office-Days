@@ -167,26 +167,25 @@ struct DashboardView: View {
 
             // Ring legend
             HStack(spacing: 16) {
-                legendDot(color: Theme.accent, label: "Credited")
-                if snap.plannedDays > 0 {
-                    legendDot(color: Theme.planned, label: "Planned")
-                }
+                legendSquare(color: Theme.accent, label: "Credited")
+                legendSquare(color: Theme.planned, label: "Planned")
             }
             .padding(.top, 2)
 
-            // Pace badge – large circle with velocity stats
+            // Pace badge – capsule with velocity stats
             VStack(spacing: 10) {
-                VStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Image(systemName: pace.icon)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                     Text(pace.label.uppercased())
-                        .font(.system(size: 9, weight: .heavy))
-                        .tracking(0.6)
+                        .font(.system(size: 11, weight: .heavy))
+                        .tracking(0.8)
                 }
                 .foregroundStyle(.white)
-                .frame(width: 72, height: 72)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
                 .background(
-                    Circle()
+                    Capsule()
                         .fill(paceColor)
                         .shadow(color: paceColor.opacity(0.4), radius: 6, y: 3)
                 )
@@ -302,9 +301,9 @@ struct DashboardView: View {
 
     // MARK: - Legend & Velocity Helpers
 
-    private func legendDot(color: Color, label: String) -> some View {
+    private func legendSquare(color: Color, label: String) -> some View {
         HStack(spacing: 5) {
-            Circle()
+            RoundedRectangle(cornerRadius: 2)
                 .fill(color)
                 .frame(width: 8, height: 8)
             Text(label)

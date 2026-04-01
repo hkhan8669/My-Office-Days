@@ -332,12 +332,12 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         do {
             let existing = try context.fetch(descriptor).first
             if let existing, existing.dayType == .office {
-                clearEntryTimestamp(for: officeName)
                 return
             }
 
-            if let existing, existing.isManualOverride {
-                clearEntryTimestamp(for: officeName)
+            // Allow geofence to override remote days even if manually set,
+            // but respect manual overrides for other types (vacation, holiday, etc.)
+            if let existing, existing.isManualOverride, existing.dayType != .remote {
                 return
             }
 
@@ -368,7 +368,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             userDefaults.set(officeName, forKey: lastCheckInOfficeKey)
             userDefaults.set(lastCheckInDate, forKey: lastCheckInDateKey)
 
-            clearEntryTimestamp(for: officeName)
             attendanceRefreshHandler?()
             refreshStatusMessage()
         } catch {
