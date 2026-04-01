@@ -39,7 +39,7 @@ struct DashboardView: View {
     }
 
     private var pace: QuarterHelper.PaceStatus {
-        QuarterHelper.paceStatus(officeDays: creditedDays + snap.futureCreditedDays + snap.plannedDays, in: quarter, asOf: Date())
+        QuarterHelper.paceStatus(officeDays: creditedDays, in: quarter, asOf: Date())
     }
 
     private var progress: Double {

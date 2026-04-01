@@ -130,9 +130,16 @@ final class AttendanceViewModel {
             let isFuture = day.dateKey > todayKey
             switch day.dayType {
             case .office:
-                snapshot.officeDays += 1
+                if isFuture {
+                    snapshot.futureCreditedDays += 1
+                } else {
+                    snapshot.officeDays += 1
+                }
             case .planned:
-                snapshot.plannedDays += 1
+                // Only future planned days count; past unresolved planned days are stale
+                if isFuture {
+                    snapshot.plannedDays += 1
+                }
             case .vacation, .holiday, .freeDay, .travel:
                 if isFuture {
                     snapshot.futureCreditedDays += 1
