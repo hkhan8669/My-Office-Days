@@ -50,7 +50,7 @@ final class NotificationService {
     func scheduleWeeklyNudgeIfAuthorized(
         officeDays: Int,
         target: Int,
-        quarterLabel: String,
+        periodLabel: String,
         completion: @escaping (Error?) -> Void
     ) {
         Task {
@@ -64,7 +64,7 @@ final class NotificationService {
                 try await scheduleWeeklyNudge(
                     officeDays: officeDays,
                     target: target,
-                    quarterLabel: quarterLabel
+                    periodLabel: periodLabel
                 )
                 completion(nil)
             } catch {
@@ -73,16 +73,17 @@ final class NotificationService {
         }
     }
 
-    func scheduleWeeklyNudge(officeDays: Int, target: Int, quarterLabel: String) async throws {
+    func scheduleWeeklyNudge(officeDays: Int, target: Int, periodLabel: String) async throws {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: ["monday-nudge", "weekly-nudge"])
 
         let remaining = max(0, target - officeDays)
+        let periodName = AppPreferences.trackingPeriod.shortLabel.lowercased()
         let content = UNMutableNotificationContent()
         content.title = "My Office Days"
         content.body = remaining > 0
-            ? "\(quarterLabel): \(officeDays)/\(target) days completed. \(remaining) remaining this quarter."
-            : "\(quarterLabel): Target reached at \(officeDays)/\(target). Nice work."
+            ? "\(periodLabel): \(officeDays)/\(target) days completed. \(remaining) remaining this \(periodName)."
+            : "\(periodLabel): Target reached at \(officeDays)/\(target). Nice work."
         content.sound = .default
 
         var components = DateComponents()

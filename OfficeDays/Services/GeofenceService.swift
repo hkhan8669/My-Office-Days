@@ -245,21 +245,21 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     func scheduleWeeklyNudge() {
         guard AppPreferences.trackingEnabled, let context = modelContext else { return }
 
-        let quarter = QuarterHelper.quarterInfo(for: now())
-        let startKey = AttendanceDay.key(for: quarter.startDate)
-        let endKey = AttendanceDay.key(for: quarter.endDate)
+        let period = PeriodHelper.currentPeriod()
+        let startKey = AttendanceDay.key(for: period.startDate)
+        let endKey = AttendanceDay.key(for: period.endDate)
         var descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= endKey && ($0.dayTypeRaw == "office" || $0.dayTypeRaw == "freeDay" || $0.dayTypeRaw == "travel") }
         )
         descriptor.fetchLimit = 200
 
         let officeDays = (try? context.fetch(descriptor).count) ?? 0
-        let target = QuarterHelper.targetDaysPerQuarter
+        let target = PeriodHelper.targetDaysPerPeriod
 
         notificationService.scheduleWeeklyNudgeIfAuthorized(
             officeDays: officeDays,
             target: target,
-            quarterLabel: quarter.label
+            periodLabel: period.label
         ) { [weak self] error in
             DispatchQueue.main.async {
                 if let error {
