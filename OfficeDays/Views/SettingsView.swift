@@ -8,7 +8,6 @@ struct SettingsView: View {
 
     @State private var showExportShare = false
     @State private var csvContent = ""
-    @State private var showImport = false
     @State private var exportYear = Calendar.current.component(.year, from: Date())
     @State private var targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
     @State private var detectionRadius: Double = 820
@@ -68,9 +67,6 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showExportShare) {
                 CSVShareSheet(csvContent: csvContent, year: exportYear)
-            }
-            .sheet(isPresented: $showImport) {
-                ImportDaysView(viewModel: viewModel)
             }
         }
         .sheet(isPresented: $showAddOffice) {
@@ -710,21 +706,6 @@ struct SettingsView: View {
             sectionHeader("DATA MANAGEMENT")
 
             VStack(spacing: 0) {
-                Button {
-                    showImport = true
-                } label: {
-                    configRow(
-                        icon: "square.and.arrow.down.fill",
-                        iconColor: Theme.vacation,
-                        title: "Import Past Days",
-                        subtitle: "Add office days from before the app"
-                    )
-                }
-
-                Divider()
-                    .foregroundStyle(Theme.outlineVariant.opacity(0.3))
-                    .padding(.leading, 60)
-
                 HStack {
                     Text("Export Year")
                         .font(.subheadline.weight(.medium))
@@ -1435,172 +1416,6 @@ struct HolidayManagementView: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Import Days View
-
-struct ImportDaysView: View {
-    let viewModel: AttendanceViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedDates: Set<Date> = []
-    @State private var displayedMonth = Date()
-
-    private let weekdayHeaders = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                VStack(spacing: 6) {
-                    Text("Tap weekdays to mark as office days")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.onSurfaceVariant)
-
-                    Text("\(selectedDates.count) days selected")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.accent)
-                }
-
-                HStack {
-                    Button { moveMonth(by: -1) } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.accent)
-                            .frame(width: 32, height: 32)
-                            .background(Theme.accent.opacity(0.08))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(PressableButtonStyle())
-
-                    Spacer()
-
-                    Text(DateHelper.monthYearString(for: displayedMonth))
-                        .font(.headline)
-                        .foregroundStyle(Theme.onSurface)
-
-                    Spacer()
-
-                    Button { moveMonth(by: 1) } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.accent)
-                            .frame(width: 32, height: 32)
-                            .background(Theme.accent.opacity(0.08))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(PressableButtonStyle())
-                }
-                .padding(.horizontal, 20)
-
-                VStack(spacing: 6) {
-                    HStack(spacing: 0) {
-                        ForEach(weekdayHeaders, id: \.self) { header in
-                            Text(header)
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Theme.onSurfaceVariant)
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-
-                    let days = calendarDays()
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 6) {
-                        ForEach(days, id: \.self) { date in
-                            if let date {
-                                importDayCell(date)
-                            } else {
-                                Color.clear.frame(height: 40)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-
-                Spacer()
-
-                Button {
-                    viewModel.importOfficeDays(dates: Array(selectedDates))
-                    dismiss()
-                } label: {
-                    Text("Import \(selectedDates.count) Days")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Theme.primaryGradient)
-                                .opacity(selectedDates.isEmpty ? 0.3 : 1)
-                        )
-                }
-                .buttonStyle(PressableButtonStyle())
-                .disabled(selectedDates.isEmpty)
-                .padding(.horizontal, 20)
-            }
-            .padding(.vertical)
-            .background(Theme.surface.ignoresSafeArea())
-            .navigationTitle("Import Past Days")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-        }
-    }
-
-    private func importDayCell(_ date: Date) -> some View {
-        let isWeekday = DateHelper.isWeekday(date)
-        let isPast = DateHelper.isPast(date) || DateHelper.isToday(date)
-        let isSelected = selectedDates.contains(Calendar.current.startOfDay(for: date))
-        let canSelect = isWeekday && isPast
-
-        return Button {
-            guard canSelect else { return }
-            let key = Calendar.current.startOfDay(for: date)
-            if selectedDates.contains(key) {
-                selectedDates.remove(key)
-            } else {
-                selectedDates.insert(key)
-            }
-        } label: {
-            ZStack {
-                if isSelected {
-                    Circle()
-                        .fill(Theme.accent)
-                        .frame(width: 34, height: 34)
-                }
-                Text(DateHelper.dayOfMonthString(for: date))
-                    .font(.body.weight(isSelected ? .bold : .medium))
-                    .foregroundStyle(
-                        isSelected ? .white :
-                            canSelect ? Theme.onSurface : Theme.onSurfaceVariant
-                    )
-            }
-        }
-        .buttonStyle(PressableButtonStyle())
-        .frame(height: 40)
-    }
-
-    private func calendarDays() -> [Date?] {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
-        let firstOfMonth = calendar.date(from: components) ?? displayedMonth
-        let firstWeekday = calendar.component(.weekday, from: firstOfMonth)
-        let offset = (firstWeekday + 5) % 7
-        let daysInMonth = calendar.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 0
-
-        var result: [Date?] = Array(repeating: nil, count: offset)
-        for day in 1...daysInMonth {
-            var dayComponents = components
-            dayComponents.day = day
-            result.append(calendar.date(from: dayComponents))
-        }
-        while result.count % 7 != 0 { result.append(nil) }
-        return result
-    }
-
-    private func moveMonth(by value: Int) {
-        displayedMonth = Calendar.current.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
     }
 }
 

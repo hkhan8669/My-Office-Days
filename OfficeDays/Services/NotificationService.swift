@@ -108,7 +108,7 @@ final class NotificationService {
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(
-            identifier: "checkin-\(AttendanceDay.key(for: Date()))",
+            identifier: "checkin-\(UUID().uuidString)",
             content: content,
             trigger: trigger
         )

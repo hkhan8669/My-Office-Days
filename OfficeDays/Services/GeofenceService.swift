@@ -191,6 +191,9 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
         // Log the office day immediately on entry – no dwell wait.
         logOfficeDayIfNeeded(officeName: circularRegion.identifier)
+
+        // Always notify on entry, even if the day was already logged.
+        sendArrivalNotification(officeName: circularRegion.identifier)
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
@@ -347,14 +350,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             userDefaults.set(officeName, forKey: lastCheckInOfficeKey)
             userDefaults.set(lastCheckInDate, forKey: lastCheckInDateKey)
 
-            notificationService.sendCheckInConfirmation(officeName: officeName) { [weak self] error in
-                DispatchQueue.main.async {
-                    if let error {
-                        self?.errorMessage = "Check-in notification failed: \(error.localizedDescription)"
-                    }
-                }
-            }
-
             clearEntryTimestamp(for: officeName)
             attendanceRefreshHandler?()
             refreshStatusMessage()
@@ -376,6 +371,16 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private func saveEntryTimestamps() {
         let payload = entryTimestamps.mapValues { $0.timeIntervalSince1970 }
         userDefaults.set(payload, forKey: entryTimestampsKey)
+    }
+
+    private func sendArrivalNotification(officeName: String) {
+        notificationService.sendCheckInConfirmation(officeName: officeName) { [weak self] error in
+            DispatchQueue.main.async {
+                if let error {
+                    self?.errorMessage = "Check-in notification failed: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     private func recordGeoLog(eventType: GeoLog.EventType, locationName: String) {
