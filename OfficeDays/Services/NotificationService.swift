@@ -61,7 +61,7 @@ final class NotificationService {
             }
 
             do {
-                try await scheduleMondayNotification(
+                try await scheduleWeeklyNudge(
                     officeDays: officeDays,
                     target: target,
                     quarterLabel: quarterLabel
@@ -73,9 +73,9 @@ final class NotificationService {
         }
     }
 
-    func scheduleMondayNotification(officeDays: Int, target: Int, quarterLabel: String) async throws {
+    func scheduleWeeklyNudge(officeDays: Int, target: Int, quarterLabel: String) async throws {
         let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: ["monday-nudge"])
+        center.removePendingNotificationRequests(withIdentifiers: ["monday-nudge", "weekly-nudge"])
 
         let remaining = max(0, target - officeDays)
         let content = UNMutableNotificationContent()
@@ -86,13 +86,13 @@ final class NotificationService {
         content.sound = .default
 
         var components = DateComponents()
-        components.weekday = 2
-        components.hour = 8
-        components.minute = 30
+        components.weekday = AppPreferences.nudgeWeekday
+        components.hour = AppPreferences.nudgeHour
+        components.minute = AppPreferences.nudgeMinute
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
         let request = UNNotificationRequest(
-            identifier: "monday-nudge",
+            identifier: "weekly-nudge",
             content: content,
             trigger: trigger
         )
@@ -127,8 +127,8 @@ final class NotificationService {
         }
     }
 
-    func removeMondayNotification() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["monday-nudge"])
+    func removeWeeklyNudge() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["monday-nudge", "weekly-nudge"])
     }
 
     private func add(_ request: UNNotificationRequest) async throws {

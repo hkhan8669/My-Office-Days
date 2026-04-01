@@ -10,9 +10,17 @@ struct SettingsView: View {
     @State private var csvContent = ""
     @State private var exportYear = Calendar.current.component(.year, from: Date())
     @State private var targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
+    @State private var nudgeWeekday = AppPreferences.nudgeWeekday
+    @State private var nudgeTime = Self.nudgeDate()
     @State private var detectionRadius: Double = 820
     @State private var showAddOffice = false
     @State private var currentYearHolidays: [AttendanceViewModel.ManagedHoliday] = []
+    private static func nudgeDate() -> Date {
+        Calendar.current.date(from: DateComponents(hour: AppPreferences.nudgeHour, minute: AppPreferences.nudgeMinute)) ?? Date()
+    }
+
+    private static let weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
     private var activeOfficeCount: Int {
         viewModel.offices().filter(\.isEnabled).count
     }
@@ -74,6 +82,8 @@ struct SettingsView: View {
         }
         .onAppear {
             targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
+            nudgeWeekday = AppPreferences.nudgeWeekday
+            nudgeTime = Self.nudgeDate()
             if let firstOffice = viewModel.offices().first {
                 detectionRadius = firstOffice.geofenceRadius * 3.28084
             }
@@ -581,7 +591,7 @@ struct SettingsView: View {
                         Text("Weekly Nudge")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.onSurface)
-                        Text("Monday morning reminder to stay on track with your quarterly target.")
+                        Text("Recurring reminder to stay on track with your quarterly target.")
                             .font(.caption)
                             .foregroundStyle(Theme.onSurfaceVariant)
                             .fixedSize(horizontal: false, vertical: true)
@@ -593,6 +603,55 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
+
+                Divider()
+                    .foregroundStyle(Theme.outlineVariant.opacity(0.3))
+                    .padding(.leading, 16)
+
+                // Day picker
+                HStack(spacing: 6) {
+                    ForEach(1...7, id: \.self) { day in
+                        let isSelected = nudgeWeekday == day
+                        Button {
+                            nudgeWeekday = day
+                            AppPreferences.setNudgeWeekday(day)
+                            geofenceService.scheduleWeeklyNudge()
+                        } label: {
+                            Text(Self.weekdayLabels[day - 1])
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(isSelected ? .white : Theme.onSurfaceVariant)
+                                .frame(width: 38, height: 32)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(isSelected ? Theme.accent : Theme.surfaceContainer)
+                                )
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+                Divider()
+                    .foregroundStyle(Theme.outlineVariant.opacity(0.3))
+                    .padding(.leading, 16)
+
+                // Time picker
+                HStack {
+                    Text("Time")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.onSurfaceVariant)
+                    Spacer()
+                    DatePicker("", selection: $nudgeTime, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .onChange(of: nudgeTime) { _, newValue in
+                            let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                            AppPreferences.setNudgeTime(hour: comps.hour ?? 8, minute: comps.minute ?? 30)
+                            geofenceService.scheduleWeeklyNudge()
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
 
                 Divider()
                     .foregroundStyle(Theme.outlineVariant.opacity(0.3))

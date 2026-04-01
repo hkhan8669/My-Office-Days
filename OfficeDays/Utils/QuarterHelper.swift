@@ -25,6 +25,37 @@ enum AppPreferences {
         UserDefaults.standard.set(enabled, forKey: trackingEnabledKey)
     }
 
+    // MARK: - Weekly Nudge
+
+    private static let nudgeDayKey = "nudgeWeekday"
+    private static let nudgeHourKey = "nudgeHour"
+    private static let nudgeMinuteKey = "nudgeMinute"
+
+    /// Weekday for the nudge notification (1=Sun … 7=Sat). Default: 2 (Monday).
+    static var nudgeWeekday: Int {
+        let stored = UserDefaults.standard.integer(forKey: nudgeDayKey)
+        return (1...7).contains(stored) ? stored : 2
+    }
+
+    static func setNudgeWeekday(_ day: Int) {
+        UserDefaults.standard.set(day, forKey: nudgeDayKey)
+    }
+
+    static var nudgeHour: Int {
+        if UserDefaults.standard.object(forKey: nudgeHourKey) == nil { return 8 }
+        return UserDefaults.standard.integer(forKey: nudgeHourKey)
+    }
+
+    static var nudgeMinute: Int {
+        if UserDefaults.standard.object(forKey: nudgeMinuteKey) == nil { return 30 }
+        return UserDefaults.standard.integer(forKey: nudgeMinuteKey)
+    }
+
+    static func setNudgeTime(hour: Int, minute: Int) {
+        UserDefaults.standard.set(hour, forKey: nudgeHourKey)
+        UserDefaults.standard.set(minute, forKey: nudgeMinuteKey)
+    }
+
 }
 
 struct QuarterHelper {

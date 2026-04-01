@@ -65,7 +65,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         AppPreferences.setTrackingEnabled(true)
         requestAuthorization()
         requestNotificationAuthorization()
-        scheduleMondayReminder()
+        scheduleWeeklyNudge()
         refreshMonitoring()
     }
 
@@ -73,7 +73,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         AppPreferences.setTrackingEnabled(false)
         requiresAlwaysPermission = false
         stopMonitoring()
-        notificationService.removeMondayNotification()
+        notificationService.removeWeeklyNudge()
         refreshStatusMessage()
     }
 
@@ -140,7 +140,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         authorizationStatus = locationManager.authorizationStatus
         refreshNotificationStatus()
         refreshMonitoring()
-        scheduleMondayReminder()
+        scheduleWeeklyNudge()
 
         // Enforce "Always" permission when tracking is enabled.
         // If the user changed it to "While Using" or denied, flag it
@@ -242,7 +242,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
     // MARK: - Private
 
-    private func scheduleMondayReminder() {
+    func scheduleWeeklyNudge() {
         guard AppPreferences.trackingEnabled, let context = modelContext else { return }
 
         let quarter = QuarterHelper.quarterInfo(for: now())
