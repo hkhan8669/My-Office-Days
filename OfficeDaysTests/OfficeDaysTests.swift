@@ -27,16 +27,16 @@ final class OfficeDaysTests: XCTestCase {
 
     // MARK: - DayType Tests
 
-    func testCountsTowardTarget_officeFreeTravel_returnsTrue() {
+    func testCountsTowardTarget_creditedTypes_returnsTrue() {
         XCTAssertTrue(DayType.office.countsTowardTarget)
         XCTAssertTrue(DayType.freeDay.countsTowardTarget)
         XCTAssertTrue(DayType.travel.countsTowardTarget)
+        XCTAssertTrue(DayType.holiday.countsTowardTarget)
+        XCTAssertTrue(DayType.vacation.countsTowardTarget)
     }
 
     func testCountsTowardTarget_otherTypes_returnsFalse() {
         XCTAssertFalse(DayType.remote.countsTowardTarget)
-        XCTAssertFalse(DayType.holiday.countsTowardTarget)
-        XCTAssertFalse(DayType.vacation.countsTowardTarget)
         XCTAssertFalse(DayType.planned.countsTowardTarget)
     }
 

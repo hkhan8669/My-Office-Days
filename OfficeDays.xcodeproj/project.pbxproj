@@ -27,6 +27,7 @@
 		E3C31FE4DA724EAD31FC545F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE424491C5DC36093503EE8 /* SettingsView.swift */; };
 		E64E42E6C7466FE3A0DDC8A4 /* GeofenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC7113ABD01AFAB7C55C558B /* GeofenceService.swift */; };
 		FF7503F320C9CD884DC76A31 /* OfficeLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29915F53568A6A2AD6F9FB74 /* OfficeLocation.swift */; };
+		AA1234560001000000000003 /* GeoLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1234560002000000000003 /* GeoLog.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +53,7 @@
 		EF5F7A238CBB935D34267A8B /* AttendanceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttendanceViewModel.swift; sourceTree = "<group>"; };
 		F201039CF0E866CABD4678B1 /* QuarterHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuarterHelper.swift; sourceTree = "<group>"; };
 		FC7113ABD01AFAB7C55C558B /* GeofenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeofenceService.swift; sourceTree = "<group>"; };
+		AA1234560002000000000003 /* GeoLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeoLog.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +133,7 @@
 				3AC3BC28661D303CC14927D7 /* DayType.swift */,
 				11AFECB20C7E2CFDE462644B /* Holiday.swift */,
 				29915F53568A6A2AD6F9FB74 /* OfficeLocation.swift */,
+				AA1234560002000000000003 /* GeoLog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -232,6 +235,7 @@
 				E3C31FE4DA724EAD31FC545F /* SettingsView.swift in Sources */,
 				AA1234560001000000000001 /* SplashView.swift in Sources */,
 				AA1234560001000000000002 /* InsightsView.swift in Sources */,
+				AA1234560001000000000003 /* GeoLog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
