@@ -135,7 +135,7 @@ private struct TrackingOnboardingView: View {
                             .font(.largeTitle.bold())
                             .foregroundStyle(Theme.textPrimary)
 
-                        Text("Office Days can detect enabled Sallie Mae offices in the background, log the day after a dwell period, and keep weekly reminders in sync with your pace.")
+                        Text("Office Days can detect enabled offices in the background, log the day as soon as you arrive, and keep weekly reminders in sync with your pace.")
                             .font(.body)
                             .foregroundStyle(Theme.textSecondary)
                     }

@@ -9,7 +9,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private let notificationService: NotificationService
     private let userDefaults: UserDefaults
     private let now: () -> Date
-    private let dwellTimeSeconds: TimeInterval = 15 * 60
     private let entryTimestampsKey = "tracking.entryTimestamps"
     private let lastCheckInOfficeKey = "tracking.lastCheckInOffice"
     private let lastCheckInDateKey = "tracking.lastCheckInDate"
@@ -18,7 +17,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private var officesProvider: (() -> [OfficeLocation])?
     private var attendanceRefreshHandler: (() -> Void)?
     private var entryTimestamps: [String: Date]
-    private var dwellTimers: [String: Timer] = [:]
 
     @Published var authorizationStatus: CLAuthorizationStatus
     @Published var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
@@ -189,32 +187,17 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         guard DateHelper.isWeekday(now()) else { return }
 
         persistEntryTimestamp(now(), for: circularRegion.identifier)
+        recordGeoLog(eventType: .entry, locationName: circularRegion.identifier)
 
-        // Start significant-location-change monitoring so iOS wakes the app
-        // after ~15 minutes to evaluate the dwell threshold in the background.
-        locationManager.startMonitoringSignificantLocationChanges()
-
-        scheduleDwellTimer(for: circularRegion.identifier)
+        // Log the office day immediately on entry – no dwell wait.
+        logOfficeDayIfNeeded(officeName: circularRegion.identifier)
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
         guard let circularRegion = region as? CLCircularRegion else { return }
+        recordGeoLog(eventType: .exit, locationName: circularRegion.identifier)
         clearEntryTimestamp(for: circularRegion.identifier)
-        cancelDwellTimer(for: circularRegion.identifier)
-        if entryTimestamps.isEmpty {
-            locationManager.stopMonitoringSignificantLocationChanges()
-        }
         refreshStatusMessage()
-    }
-
-    // Fired by significant-location-change wakes in background.
-    // Re-check state for all monitored regions so dwell can be evaluated.
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        for region in locationManager.monitoredRegions {
-            if let circularRegion = region as? CLCircularRegion {
-                locationManager.requestState(for: circularRegion)
-            }
-        }
     }
 
     func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
@@ -225,11 +208,10 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         case .inside:
             if entryTimestamps[circularRegion.identifier] == nil {
                 persistEntryTimestamp(now(), for: circularRegion.identifier)
+                recordGeoLog(eventType: .entry, locationName: circularRegion.identifier)
             }
-            if dwellTimers[circularRegion.identifier] == nil {
-                scheduleDwellTimer(for: circularRegion.identifier)
-            }
-            evaluateEntryIfEligible(for: circularRegion.identifier)
+            // Log immediately when detected inside
+            logOfficeDayIfNeeded(officeName: circularRegion.identifier)
         case .outside:
             clearEntryTimestamp(for: circularRegion.identifier)
         default:
@@ -273,8 +255,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         isMonitoring = false
         if clearEntries {
             entryTimestamps.removeAll()
-            dwellTimers.values.forEach { $0.invalidate() }
-            dwellTimers.removeAll()
             saveEntryTimestamps()
         }
         refreshStatusMessage()
@@ -319,13 +299,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
 
-    private func evaluateEntryIfEligible(for officeName: String) {
-        guard let entryTime = entryTimestamps[officeName] else { return }
-        guard now().timeIntervalSince(entryTime) >= dwellTimeSeconds else { return }
-        logOfficeDayIfNeeded(officeName: officeName)
-        cancelDwellTimer(for: officeName)
-    }
-
     private func logOfficeDayIfNeeded(officeName: String) {
         guard let context = modelContext else { return }
         let today = Calendar.current.startOfDay(for: now())
@@ -367,6 +340,8 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
             try context.save()
 
+            recordGeoLog(eventType: .autoLogged, locationName: officeName)
+
             lastCheckedInOffice = officeName
             lastCheckInDate = now()
             userDefaults.set(officeName, forKey: lastCheckInOfficeKey)
@@ -388,21 +363,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
 
-    private func scheduleDwellTimer(for officeName: String) {
-        dwellTimers[officeName]?.invalidate()
-        let timer = Timer.scheduledTimer(withTimeInterval: dwellTimeSeconds + 30, repeats: false) { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.evaluateEntryIfEligible(for: officeName)
-            }
-        }
-        dwellTimers[officeName] = timer
-    }
-
-    private func cancelDwellTimer(for officeName: String) {
-        dwellTimers[officeName]?.invalidate()
-        dwellTimers.removeValue(forKey: officeName)
-    }
-
     private func persistEntryTimestamp(_ date: Date, for officeName: String) {
         entryTimestamps[officeName] = date
         saveEntryTimestamps()
@@ -416,6 +376,13 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private func saveEntryTimestamps() {
         let payload = entryTimestamps.mapValues { $0.timeIntervalSince1970 }
         userDefaults.set(payload, forKey: entryTimestampsKey)
+    }
+
+    private func recordGeoLog(eventType: GeoLog.EventType, locationName: String) {
+        guard let context = modelContext else { return }
+        let log = GeoLog(timestamp: now(), locationName: locationName, eventType: eventType)
+        context.insert(log)
+        try? context.save()
     }
 
     private static func loadEntryTimestamps(from userDefaults: UserDefaults, key: String) -> [String: Date] {

@@ -8,12 +8,12 @@ struct OfficeDaysApp: App {
     init() {
         do {
             container = try ModelContainer(
-                for: AttendanceDay.self, OfficeLocation.self, Holiday.self,
+                for: AttendanceDay.self, OfficeLocation.self, Holiday.self, GeoLog.self,
                 configurations: ModelConfiguration(isStoredInMemoryOnly: false)
             )
         } catch {
             container = try! ModelContainer(
-                for: AttendanceDay.self, OfficeLocation.self, Holiday.self,
+                for: AttendanceDay.self, OfficeLocation.self, Holiday.self, GeoLog.self,
                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)
             )
         }

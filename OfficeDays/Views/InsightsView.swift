@@ -1,100 +1,21 @@
 import SwiftUI
+import SwiftData
 
 struct InsightsView: View {
     let viewModel: AttendanceViewModel
 
-    @State private var filterType: DayTypeFilter = .all
+    @Query(sort: \GeoLog.timestamp, order: .reverse)
+    private var geoLogs: [GeoLog]
+
     @State private var showShareSheet = false
     @State private var csvContent = ""
-    @State private var cachedAllDays: [AttendanceDay] = []
-
-    private var quarter: QuarterHelper.QuarterInfo {
-        QuarterHelper.quarterInfo(for: Date())
-    }
-
-    private func loadAllDays() -> [AttendanceDay] {
-        let currentYear = Calendar.current.component(.year, from: Date())
-        var days: [AttendanceDay] = []
-        for year in (currentYear - 2)...currentYear {
-            for q in QuarterHelper.allQuarters(for: year) {
-                days.append(contentsOf: viewModel.allDays(in: q))
-            }
-        }
-        var seen = Set<String>()
-        return days.filter { seen.insert($0.dateKey).inserted }
-    }
-
-    private var ledgerEntries: [AttendanceDay] {
-        let days = cachedAllDays.sorted { $0.date > $1.date }
-
-        switch filterType {
-        case .all:
-            return days
-        case .office:
-            return days.filter { $0.dayType == .office || $0.dayType == .freeDay || $0.dayType == .travel }
-        case .remote:
-            return days.filter { $0.dayType == .remote }
-        case .vacation:
-            return days.filter { $0.dayType == .vacation }
-        case .holiday:
-            return days.filter { $0.dayType == .holiday }
-        }
-    }
-
-    private var currentStreak: Int {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let officeDays = cachedAllDays
-            .filter { $0.dayType.countsTowardTarget }
-            .map { calendar.startOfDay(for: $0.date) }
-            .sorted(by: >)
-
-        var streak = 0
-        var checkDate = today
-
-        while true {
-            let weekday = calendar.component(.weekday, from: checkDate)
-            if weekday == 1 || weekday == 7 {
-                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
-                continue
-            }
-            if officeDays.contains(checkDate) {
-                streak += 1
-                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
-            } else {
-                break
-            }
-        }
-        return streak
-    }
-
-    private var mostFrequentLocation: String {
-        let officeNames = cachedAllDays
-            .compactMap { $0.officeName }
-            .filter { !$0.isEmpty }
-
-        guard !officeNames.isEmpty else { return "---" }
-
-        let counts = Dictionary(grouping: officeNames, by: { $0 })
-            .mapValues { $0.count }
-        return counts.max(by: { $0.value < $1.value })?.key ?? "---"
-    }
-
-    private var nextPlannedDay: AttendanceDay? {
-        let today = Calendar.current.startOfDay(for: Date())
-        return cachedAllDays
-            .filter { $0.dayType == .planned && Calendar.current.startOfDay(for: $0.date) > today }
-            .sorted { $0.date < $1.date }
-            .first
-    }
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
                     headerSection
-                    filterBar
-                    ledgerSection
+                    geoLogSection
                     statCardsSection
                 }
                 .padding(.horizontal, 20)
@@ -102,11 +23,8 @@ struct InsightsView: View {
                 .padding(.bottom, 40)
             }
             .background(Theme.surfaceGradient.ignoresSafeArea())
-            .navigationTitle("Activity Log")
+            .navigationTitle("Geo Log")
             .navigationBarTitleDisplayMode(.large)
-        }
-        .onAppear {
-            cachedAllDays = loadAllDays()
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(text: csvContent)
@@ -117,13 +35,13 @@ struct InsightsView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("RECENT HISTORY")
+            Text("GEOFENCE EVENTS")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(Theme.textTertiary)
                 .tracking(1.5)
 
             HStack(alignment: .bottom) {
-                Text("\(ledgerEntries.count) entries")
+                Text("\(geoLogs.count) events")
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
 
@@ -150,47 +68,18 @@ struct InsightsView: View {
         }
     }
 
-    // MARK: - Filter Bar
+    // MARK: - Geo Log Table
 
-    private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(DayTypeFilter.allCases, id: \.self) { filter in
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            filterType = filter
-                        }
-                    } label: {
-                        Text(filter.label)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(filterType == filter ? .white : Theme.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule()
-                                    .fill(filterType == filter ? Theme.primaryContainer : Theme.surfaceContainer)
-                            )
-                    }
-                    .buttonStyle(PressableButtonStyle())
-                }
-            }
-        }
-    }
-
-    // MARK: - Ledger Table
-
-    private var ledgerSection: some View {
+    private var geoLogSection: some View {
         VStack(spacing: 0) {
             // Table header
             HStack(spacing: 0) {
-                Text("DATE")
-                    .frame(width: 82, alignment: .leading)
                 Text("TIME")
-                    .frame(width: 56, alignment: .leading)
+                    .frame(width: 90, alignment: .leading)
                 Text("LOCATION")
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("STATUS")
-                    .frame(width: 72, alignment: .trailing)
+                Text("EVENT")
+                    .frame(width: 90, alignment: .trailing)
             }
             .font(.caption2.weight(.bold))
             .foregroundStyle(Theme.textTertiary)
@@ -199,22 +88,26 @@ struct InsightsView: View {
             .padding(.vertical, 10)
             .background(Theme.surfaceContainerHighest.opacity(0.7))
 
-            if ledgerEntries.isEmpty {
+            if geoLogs.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "tray")
+                    Image(systemName: "location.slash")
                         .font(.largeTitle)
                         .foregroundStyle(Theme.textTertiary)
-                    Text("No entries found")
+                    Text("No geofence events yet")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
+                    Text("Events will appear here when you enter or leave a tracked location.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textTertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
             } else {
-                ForEach(Array(ledgerEntries.enumerated()), id: \.element.dateKey) { index, day in
-                    ledgerRow(day: day, isEven: index % 2 == 0)
+                ForEach(Array(geoLogs.enumerated()), id: \.offset) { index, log in
+                    geoLogRow(log: log, isEven: index % 2 == 0)
                 }
-
             }
         }
         .background(Theme.cardBackground)
@@ -227,66 +120,34 @@ struct InsightsView: View {
         .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
     }
 
-    private func ledgerRow(day: AttendanceDay, isEven: Bool) -> some View {
+    private func geoLogRow(log: GeoLog, isEven: Bool) -> some View {
         HStack(spacing: 0) {
-            // Date column
+            // Time column – date + time
             VStack(alignment: .leading, spacing: 1) {
-                Text(DateHelper.shortDateString(for: day.date))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.primary)
-                Text(DateHelper.weekdayShort(for: day.date))
+                Text(dateString(from: log.timestamp))
                     .font(.caption2)
                     .foregroundStyle(Theme.textTertiary)
+                Text(timeString(from: log.timestamp))
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Theme.primary)
             }
-            .frame(width: 82, alignment: .leading)
-
-            // Time column - auto-log time chip
-            Group {
-                if day.isAutoLogged {
-                    Text(timeString(from: day.createdAt))
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Theme.accent.opacity(0.08))
-                        )
-                } else {
-                    Color.clear
-                }
-            }
-            .frame(width: 56, alignment: .leading)
+            .frame(width: 90, alignment: .leading)
 
             // Location column
-            HStack(spacing: 4) {
-                if let officeName = day.officeName, !officeName.isEmpty {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Theme.accent)
-                    Text(officeName)
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                } else if let holidayName = day.holidayName, !holidayName.isEmpty {
-                    Image(systemName: "star.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Theme.holiday)
-                    Text(holidayName)
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                } else {
-                    Text(day.dayType.label)
-                        .font(.caption)
-                        .foregroundStyle(Theme.textTertiary)
-                }
+            HStack(spacing: 5) {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(eventColor(for: log.eventType))
+                Text(log.locationName)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Status badge
-            statusBadge(for: day)
-                .frame(width: 72, alignment: .trailing)
+            // Event badge
+            eventBadge(for: log.eventType)
+                .frame(width: 90, alignment: .trailing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -294,14 +155,12 @@ struct InsightsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func statusBadge(for day: AttendanceDay) -> some View {
-        let color = Theme.color(for: day.dayType)
+    private func eventBadge(for eventType: GeoLog.EventType) -> some View {
+        let color = eventColor(for: eventType)
         return HStack(spacing: 3) {
-            if day.isAutoLogged {
-                Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: 8))
-            }
-            Text(day.dayType.shortLabel)
+            Image(systemName: eventIcon(for: eventType))
+                .font(.system(size: 9))
+            Text(eventLabel(for: eventType))
                 .font(.caption2.weight(.semibold))
         }
         .foregroundStyle(color)
@@ -309,22 +168,94 @@ struct InsightsView: View {
         .padding(.vertical, 4)
         .background(
             Capsule()
-                .fill(color.opacity(0.1))
+                .fill(color.opacity(0.12))
         )
+    }
+
+    private func eventColor(for eventType: GeoLog.EventType) -> Color {
+        switch eventType {
+        case .entry: return Theme.vacation    // Green
+        case .exit: return Theme.behind       // Red
+        case .autoLogged: return Theme.onTrack // Blue
+        }
+    }
+
+    private func eventIcon(for eventType: GeoLog.EventType) -> String {
+        switch eventType {
+        case .entry: return "arrow.down.circle.fill"
+        case .exit: return "arrow.up.circle.fill"
+        case .autoLogged: return "checkmark.shield.fill"
+        }
+    }
+
+    private func eventLabel(for eventType: GeoLog.EventType) -> String {
+        switch eventType {
+        case .entry: return "ENTERED"
+        case .exit: return "EXITED"
+        case .autoLogged: return "LOGGED"
+        }
     }
 
     // MARK: - Stat Cards
 
     private var statCardsSection: some View {
         VStack(spacing: 12) {
-            // Current Streak - full width, dark blue
             streakCard
 
             HStack(spacing: 12) {
                 frequentLocationCard
-                nextPlannedCard
+                totalEventsCard
             }
         }
+    }
+
+    private var currentStreak: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let allDays = loadAllDays()
+        let officeDays = allDays
+            .filter { $0.dayType.countsTowardTarget }
+            .map { calendar.startOfDay(for: $0.date) }
+            .sorted(by: >)
+
+        var streak = 0
+        var checkDate = today
+
+        while true {
+            let weekday = calendar.component(.weekday, from: checkDate)
+            if weekday == 1 || weekday == 7 {
+                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+                continue
+            }
+            if officeDays.contains(checkDate) {
+                streak += 1
+                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+            } else {
+                break
+            }
+        }
+        return streak
+    }
+
+    private func loadAllDays() -> [AttendanceDay] {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        var days: [AttendanceDay] = []
+        for year in (currentYear - 2)...currentYear {
+            for q in QuarterHelper.allQuarters(for: year) {
+                days.append(contentsOf: viewModel.allDays(in: q))
+            }
+        }
+        var seen = Set<String>()
+        return days.filter { seen.insert($0.dateKey).inserted }
+    }
+
+    private var mostFrequentLocation: String {
+        let names = geoLogs
+            .filter { $0.eventType == .autoLogged }
+            .map(\.locationName)
+        guard !names.isEmpty else { return "---" }
+        let counts = Dictionary(grouping: names, by: { $0 }).mapValues(\.count)
+        return counts.max(by: { $0.value < $1.value })?.key ?? "---"
     }
 
     private var streakCard: some View {
@@ -389,7 +320,7 @@ struct InsightsView: View {
 
             Spacer(minLength: 0)
 
-            Text("All time")
+            Text("Auto-logged")
                 .font(.caption2)
                 .foregroundStyle(Theme.textTertiary)
         }
@@ -419,30 +350,27 @@ struct InsightsView: View {
         .accessibilityLabel("Most frequent location, \(mostFrequentLocation)")
     }
 
-    private var nextPlannedCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("NEXT PLANNED")
+    private var totalEventsCard: some View {
+        let entryCount = geoLogs.filter { $0.eventType == .entry }.count
+        let exitCount = geoLogs.filter { $0.eventType == .exit }.count
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("EVENTS TODAY")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Theme.textTertiary)
                 .tracking(1.3)
 
-            if let nextDay = nextPlannedDay {
-                Text(DateHelper.shortDateString(for: nextDay.date))
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
-
-                Text(DateHelper.weekdayShort(for: nextDay.date))
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-            } else {
-                Text("None")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.textTertiary)
-
-                Text("No planned days")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textTertiary)
+            let todayLogs = geoLogs.filter {
+                Calendar.current.isDateInToday($0.timestamp)
             }
+
+            Text("\(todayLogs.count)")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+
+            Text("\(entryCount) entries, \(exitCount) exits")
+                .font(.caption2)
+                .foregroundStyle(Theme.textTertiary)
 
             Spacer(minLength: 0)
         }
@@ -450,26 +378,17 @@ struct InsightsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 120)
         .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Theme.cardBackground)
-                    .shadow(color: .black.opacity(0.02), radius: 1, y: 1)
-                    .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
-
-                // Subtle calendar pattern overlay
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Theme.planned.opacity(0.04))
-            }
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Theme.cardBackground)
+                .shadow(color: .black.opacity(0.02), radius: 1, y: 1)
+                .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            nextPlannedDay.map { "Next planned day, \(DateHelper.fullDateString(for: $0.date))" }
-                ?? "No upcoming planned days"
-        )
+        .accessibilityLabel("Total events: \(entryCount) entries, \(exitCount) exits")
     }
 
     // MARK: - Helpers
@@ -479,21 +398,11 @@ struct InsightsView: View {
         formatter.dateFormat = "h:mm a"
         return formatter.string(from: date)
     }
-}
 
-// MARK: - Filter Enum
-
-private enum DayTypeFilter: CaseIterable {
-    case all, office, remote, vacation, holiday
-
-    var label: String {
-        switch self {
-        case .all: "All"
-        case .office: "Office"
-        case .remote: "Remote"
-        case .vacation: "Vacation"
-        case .holiday: "Holiday"
-        }
+    private func dateString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
     }
 }
 
