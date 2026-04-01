@@ -953,6 +953,17 @@ struct SettingsView: View {
                         .labelsHidden()
                         .onChange(of: holidaysEnabled) { _, newValue in
                             AppPreferences.setHolidaysEnabled(newValue)
+                            if newValue {
+                                let currentYear = Calendar.current.component(.year, from: Date())
+                                for year in (currentYear - 1)...(currentYear + 2) {
+                                    viewModel.ensureHolidays(for: year)
+                                }
+                                currentYearHolidays = viewModel.holidays(for: currentYear)
+                            } else {
+                                viewModel.removeAllAutoHolidays()
+                                let currentYear = Calendar.current.component(.year, from: Date())
+                                currentYearHolidays = viewModel.holidays(for: currentYear)
+                            }
                         }
                 }
                 .padding(.horizontal, 16)

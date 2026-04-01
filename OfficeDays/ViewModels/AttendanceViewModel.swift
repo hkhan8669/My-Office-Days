@@ -391,6 +391,22 @@ final class AttendanceViewModel {
         saveAndRefresh(userMessage: "Unable to delete the holiday.")
     }
 
+    /// Remove all auto-seeded holiday entries (non-manual-override holidays).
+    func removeAllAutoHolidays() {
+        let holidayType = DayType.holiday.rawValue
+        let descriptor = FetchDescriptor<AttendanceDay>(
+            predicate: #Predicate {
+                $0.dayTypeRaw == holidayType && $0.isManualOverride == false
+            }
+        )
+        let holidays = fetch(descriptor, userMessage: "Unable to load holidays for removal.")
+        guard !holidays.isEmpty else { return }
+        for day in holidays {
+            modelContext.delete(day)
+        }
+        saveAndRefresh(userMessage: "Unable to remove holidays.")
+    }
+
     func addOffice(name: String, address: String, latitude: Double, longitude: Double, radiusInFeet: Double) {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
