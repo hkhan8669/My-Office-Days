@@ -34,11 +34,11 @@
 		<false/>
 	</dict>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>My Office Days uses your location to automatically log when you arrive at an SLM office. This helps track your in-office attendance toward the quarterly target.</string>
+	<string>My Office Days uses your location to automatically log when you arrive at a tracked office. This helps track your in-office attendance toward your target.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>My Office Days uses your location to check if you're at an SLM office.</string>
+	<string>My Office Days uses your location to check if you're at a tracked office.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>My Office Days needs background location access to automatically detect when you arrive at an SLM office, even when the app is closed.</string>
+	<string>My Office Days needs background location access to automatically detect when you arrive at a tracked office, even when the app is closed.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

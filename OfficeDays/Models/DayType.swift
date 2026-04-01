@@ -60,7 +60,7 @@ enum DayType: String, Codable, CaseIterable, Identifiable {
     }
 
     var countsTowardTarget: Bool {
-        self == .office || self == .freeDay || self == .travel || self == .holiday || self == .vacation
+        AppPreferences.dayTypesCountingTowardTarget.contains(rawValue)
     }
 
     static var manualOptions: [DayType] {

@@ -256,14 +256,14 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         let officeDays = (try? context.fetch(descriptor).count) ?? 0
         let target = QuarterHelper.targetDaysPerQuarter
 
-        notificationService.scheduleMondayNotificationIfAuthorized(
+        notificationService.scheduleWeeklyNudgeIfAuthorized(
             officeDays: officeDays,
             target: target,
             quarterLabel: quarter.label
         ) { [weak self] error in
             DispatchQueue.main.async {
                 if let error {
-                    self?.errorMessage = "Monday reminder scheduling failed: \(error.localizedDescription)"
+                    self?.errorMessage = "Weekly nudge scheduling failed: \(error.localizedDescription)"
                 }
             }
         }

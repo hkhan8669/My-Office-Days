@@ -403,8 +403,7 @@ struct DashboardView: View {
         // Walk backwards from today up to 14 days to find recent logged days
         for offset in 0..<14 {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
-            let weekday = calendar.component(.weekday, from: date)
-            guard weekday >= 2 && weekday <= 6 else { continue } // weekdays only
+            guard AppPreferences.isWorkDay(date) else { continue } // work days only
             guard date >= quarter.startDate else { break }
 
             if let day = viewModel.attendanceDay(for: date) {

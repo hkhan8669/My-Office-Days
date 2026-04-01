@@ -32,21 +32,15 @@ struct ContentView: View {
                 }
                 .animation(.easeInOut(duration: 0.4), value: showSplash)
                 .animation(.easeInOut(duration: 0.3), value: geofenceService.requiresAlwaysPermission)
-                .sheet(isPresented: $showTrackingOnboarding) {
-                    TrackingOnboardingView(
+                .fullScreenCover(isPresented: $showTrackingOnboarding) {
+                    OnboardingFlowView(
+                        viewModel: viewModel,
                         geofenceService: geofenceService,
-                        onEnable: {
-                            geofenceService.enableTracking()
-                            hasCompletedTrackingOnboarding = true
-                            showTrackingOnboarding = false
-                        },
-                        onSkip: {
+                        onComplete: {
                             hasCompletedTrackingOnboarding = true
                             showTrackingOnboarding = false
                         }
                     )
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
                 }
                 .onChange(of: viewModel.lastErrorMessage) { _, newValue in
                     showViewModelError = newValue != nil
@@ -126,83 +120,378 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Tracking Onboarding
+// MARK: - Onboarding Flow
 
-private struct TrackingOnboardingView: View {
+private struct OnboardingFlowView: View {
+    let viewModel: AttendanceViewModel
     @ObservedObject var geofenceService: GeofenceService
-    let onEnable: () -> Void
-    let onSkip: () -> Void
+    let onComplete: () -> Void
+
+    @State private var step = 0
+
+    private let weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    // Preferences state
+    @State private var selectedWorkDays: Set<Int> = AppPreferences.workDays
+    @State private var holidaysEnabled = AppPreferences.holidaysEnabled
+    @State private var travelCounts = AppPreferences.dayTypesCountingTowardTarget.contains("travel")
+    @State private var vacationCounts = AppPreferences.dayTypesCountingTowardTarget.contains("vacation")
+    @State private var holidayCounts = AppPreferences.dayTypesCountingTowardTarget.contains("holiday")
+    @State private var creditCounts = AppPreferences.dayTypesCountingTowardTarget.contains("freeDay")
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Enable Auto Tracking")
-                            .font(.largeTitle.bold())
-                            .foregroundStyle(Theme.textPrimary)
+        ZStack {
+            Theme.surface.ignoresSafeArea()
 
-                        Text("Office Days can detect enabled offices in the background, log the day as soon as you arrive, and keep weekly reminders in sync with your pace.")
-                            .font(.body)
-                            .foregroundStyle(Theme.textSecondary)
+            VStack(spacing: 0) {
+                // Progress dots
+                HStack(spacing: 8) {
+                    ForEach(0..<4, id: \.self) { i in
+                        Capsule()
+                            .fill(i <= step ? Theme.accent : Theme.outlineVariant.opacity(0.3))
+                            .frame(height: 4)
                     }
-
-                    VStack(spacing: 12) {
-                        onboardingCard(
-                            icon: "location.fill",
-                            color: Theme.accent,
-                            title: "Always location",
-                            subtitle: "Needed for reliable background office arrivals."
-                        )
-                        onboardingCard(
-                            icon: "bell.badge.fill",
-                            color: Theme.planned,
-                            title: "Notifications",
-                            subtitle: "Used for Monday reminders and check-in confirmations."
-                        )
-                        onboardingCard(
-                            icon: "building.2.fill",
-                            color: Theme.vacation,
-                            title: "Office controls",
-                            subtitle: "You can disable offices or change radiuses later in Setup."
-                        )
-                    }
-
-                    Spacer(minLength: 0)
-
-                    Button {
-                        onEnable()
-                    } label: {
-                        Text("Enable tracking")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Theme.primaryGradient)
-                            )
-                    }
-                    .buttonStyle(PressableButtonStyle())
-
-                    Button("Not now") {
-                        onSkip()
-                    }
-                    .font(.headline)
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
                 }
-                .padding(24)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+
+                // Content
+                TabView(selection: $step) {
+                    welcomeStep.tag(0)
+                    officesStep.tag(1)
+                    preferencesStep.tag(2)
+                    permissionsStep.tag(3)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.3), value: step)
             }
-            .background(Theme.surfaceGradient.ignoresSafeArea())
-            .navigationTitle("Tracking")
-            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
-    private func onboardingCard(icon: String, color: Color, title: String, subtitle: String) -> some View {
-        HStack(spacing: 14) {
+    // MARK: Step 1 – Welcome
+
+    private var welcomeStep: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(Theme.primary.opacity(0.08))
+                    .frame(width: 112, height: 112)
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(LinearGradient(colors: [Theme.primary, Theme.primaryContainer], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 96, height: 96)
+                    .shadow(color: Theme.primary.opacity(0.3), radius: 12, y: 6)
+                Image(systemName: "building.2.fill")
+                    .font(.system(size: 40, weight: .medium))
+                    .foregroundStyle(.white)
+            }
+            .padding(.bottom, 28)
+
+            Text("My Office Days")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.textPrimary)
+                .padding(.bottom, 8)
+
+            Text("Track your office attendance effortlessly with automatic check-ins and smart insights.")
+                .font(.body)
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 32)
+
+            HStack(spacing: 6) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.accent.opacity(0.7))
+                Text("All data stays securely on your device")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.onSurfaceVariant)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(Capsule().fill(Theme.surfaceContainerLow))
+
+            Spacer()
+
+            onboardingButton("Get Started") { step = 1 }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
+        }
+    }
+
+    // MARK: Step 2 – Offices
+
+    private var officesStep: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                stepHeader(
+                    icon: "building.2.fill",
+                    color: Theme.accent,
+                    title: "Your Offices",
+                    subtitle: "Select which offices you'd like to track. You can add or change these anytime in Setup."
+                )
+
+                VStack(spacing: 2) {
+                    ForEach(viewModel.offices(), id: \.name) { office in
+                        HStack(spacing: 14) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(office.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.onSurface)
+                                Text(office.address)
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.onSurfaceVariant)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Toggle("", isOn: Binding(
+                                get: { office.isEnabled },
+                                set: { _ in viewModel.toggleOfficeEnabled(office: office) }
+                            ))
+                            .tint(Theme.accent)
+                            .labelsHidden()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                }
+                .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
+
+                Text("You can add custom offices later in the Setup tab.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.onSurfaceVariant)
+
+                Spacer(minLength: 40)
+
+                onboardingButton("Continue") { step = 2 }
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: Step 3 – Preferences
+
+    private var preferencesStep: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                stepHeader(
+                    icon: "slider.horizontal.3",
+                    color: Theme.vacation,
+                    title: "Your Preferences",
+                    subtitle: "Customize how tracking works for you."
+                )
+
+                // Work days
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("WORK DAYS")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1)
+
+                    HStack(spacing: 6) {
+                        ForEach(0..<7, id: \.self) { i in
+                            let weekday = i + 1
+                            let isSelected = selectedWorkDays.contains(weekday)
+                            Button {
+                                if isSelected {
+                                    if selectedWorkDays.count > 1 { selectedWorkDays.remove(weekday) }
+                                } else {
+                                    selectedWorkDays.insert(weekday)
+                                }
+                                AppPreferences.setWorkDays(selectedWorkDays)
+                            } label: {
+                                Text(weekdayLabels[i])
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(isSelected ? .white : Theme.onSurfaceVariant)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 38)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(isSelected ? Theme.accent : Theme.surfaceContainer))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                // What counts toward target
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("COUNTS TOWARD TARGET")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1)
+
+                    Text("Office days always count. Choose which other day types should count toward your attendance target.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.onSurfaceVariant)
+
+                    VStack(spacing: 0) {
+                        targetToggle(label: "Travel Days", icon: "car.fill", isOn: $travelCounts)
+                        Divider().padding(.leading, 52)
+                        targetToggle(label: "Vacation Days", icon: "airplane", isOn: $vacationCounts)
+                        Divider().padding(.leading, 52)
+                        targetToggle(label: "Holidays", icon: "star.fill", isOn: $holidayCounts)
+                        Divider().padding(.leading, 52)
+                        targetToggle(label: "Office Credit", icon: "checkmark.seal.fill", isOn: $creditCounts)
+                    }
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
+                }
+
+                // US Holidays
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("HOLIDAYS")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1)
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("US Federal Holidays")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.onSurface)
+                            Text("Auto-populate 13 federal holidays each year")
+                                .font(.caption)
+                                .foregroundStyle(Theme.onSurfaceVariant)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $holidaysEnabled)
+                            .tint(Theme.accent)
+                            .labelsHidden()
+                            .onChange(of: holidaysEnabled) { _, newValue in
+                                AppPreferences.setHolidaysEnabled(newValue)
+                            }
+                    }
+                    .padding(14)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
+
+                    Text("You can always add custom holidays in Setup.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.onSurfaceVariant)
+                }
+
+                Spacer(minLength: 40)
+
+                onboardingButton("Continue") {
+                    saveTargetPreferences()
+                    step = 3
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: Step 4 – Permissions
+
+    private var permissionsStep: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                stepHeader(
+                    icon: "checkmark.shield.fill",
+                    color: Theme.accent,
+                    title: "Permissions",
+                    subtitle: "For the best experience, enable location and notifications."
+                )
+
+                VStack(spacing: 12) {
+                    permissionCard(
+                        icon: "location.fill",
+                        color: Theme.accent,
+                        title: "Location — Always",
+                        subtitle: "Detects when you arrive at the office, even in the background. We recommend \"Always\" for reliable auto-logging.",
+                        recommended: true
+                    )
+                    permissionCard(
+                        icon: "bell.badge.fill",
+                        color: Theme.planned,
+                        title: "Notifications",
+                        subtitle: "Get check-in confirmations when you arrive and weekly progress reminders.",
+                        recommended: false
+                    )
+                }
+
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.accent.opacity(0.7))
+                    Text("Your location is only used to detect office arrivals. Nothing is shared or uploaded.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.onSurfaceVariant)
+                }
+
+                Spacer(minLength: 40)
+
+                onboardingButton("Enable Tracking") {
+                    geofenceService.enableTracking()
+                    onComplete()
+                }
+
+                Button("Skip for now") { onComplete() }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func stepHeader(icon: String, color: Color, title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 42, height: 42)
+                Image(systemName: icon)
+                    .font(.headline)
+                    .foregroundStyle(color)
+            }
+
+            Text(title)
+                .font(.title.bold())
+                .foregroundStyle(Theme.textPrimary)
+
+            Text(subtitle)
+                .font(.body)
+                .foregroundStyle(Theme.textSecondary)
+        }
+    }
+
+    private func onboardingButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(RoundedRectangle(cornerRadius: 16).fill(Theme.primaryGradient))
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+
+    private func targetToggle(label: String, icon: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.onSurfaceVariant)
+                .frame(width: 24)
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(Theme.onSurface)
+            Spacer()
+            Toggle("", isOn: isOn)
+                .tint(Theme.accent)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private func permissionCard(icon: String, color: Color, title: String, subtitle: String, recommended: Bool) -> some View {
+        HStack(alignment: .top, spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(color.opacity(0.12))
@@ -213,15 +502,26 @@ private struct TrackingOnboardingView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                    if recommended {
+                        Text("Recommended")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Theme.accent))
+                    }
+                }
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(16)
         .background(
@@ -230,10 +530,16 @@ private struct TrackingOnboardingView: View {
                 .shadow(color: .black.opacity(0.02), radius: 1, y: 1)
                 .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5))
+    }
+
+    private func saveTargetPreferences() {
+        var types: Set<String> = ["office"]
+        if travelCounts { types.insert("travel") }
+        if vacationCounts { types.insert("vacation") }
+        if holidayCounts { types.insert("holiday") }
+        if creditCounts { types.insert("freeDay") }
+        AppPreferences.setDayTypesCountingTowardTarget(types)
     }
 }
 

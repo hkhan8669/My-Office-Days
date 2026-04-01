@@ -222,8 +222,7 @@ struct InsightsView: View {
         var checkDate = today
 
         while true {
-            let weekday = calendar.component(.weekday, from: checkDate)
-            if weekday == 1 || weekday == 7 {
+            if !AppPreferences.isWorkDay(checkDate) {
                 checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
                 continue
             }

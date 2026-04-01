@@ -47,7 +47,7 @@ final class NotificationService {
         }
     }
 
-    func scheduleMondayNotificationIfAuthorized(
+    func scheduleWeeklyNudgeIfAuthorized(
         officeDays: Int,
         target: Int,
         quarterLabel: String,

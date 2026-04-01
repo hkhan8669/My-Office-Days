@@ -40,8 +40,7 @@ struct DateHelper {
     }()
 
     static func isWeekday(_ date: Date) -> Bool {
-        let weekday = calendar.component(.weekday, from: date)
-        return weekday >= 2 && weekday <= 6
+        AppPreferences.isWorkDay(date)
     }
 
     static func startOfDay(_ date: Date) -> Date {

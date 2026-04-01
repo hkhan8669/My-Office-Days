@@ -74,9 +74,11 @@ final class AttendanceViewModel {
         seedOffices()
         migrateLegacyHolidays()
 
-        let currentYear = Calendar.current.component(.year, from: Date())
-        for year in (currentYear - 1)...(currentYear + 2) {
-            ensureHolidays(for: year)
+        if AppPreferences.holidaysEnabled {
+            let currentYear = Calendar.current.component(.year, from: Date())
+            for year in (currentYear - 1)...(currentYear + 2) {
+                ensureHolidays(for: year)
+            }
         }
 
         resolveStaleEntries()
@@ -413,11 +415,6 @@ final class AttendanceViewModel {
     }
 
     func deleteOffice(_ office: OfficeLocation) {
-        guard office.isCustom else {
-            lastErrorMessage = "Default offices can be disabled, but not deleted."
-            return
-        }
-
         modelContext.delete(office)
         saveChanges("Unable to delete the office location.")
     }
@@ -493,8 +490,7 @@ final class AttendanceViewModel {
         weekdayFormatter.dateFormat = "EEE"
 
         while current <= endOfYear {
-            let weekday = calendar.component(.weekday, from: current)
-            if weekday >= 2 && weekday <= 6 {
+            if AppPreferences.isWorkDay(current) {
                 let day = dayMap[AttendanceDay.key(for: current)]
                 let typeString = day?.dayType.shortLabel ?? "Unlogged"
                 let office = day?.officeName ?? ""

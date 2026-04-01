@@ -12,6 +12,12 @@ struct SettingsView: View {
     @State private var targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
     @State private var nudgeWeekday = AppPreferences.nudgeWeekday
     @State private var nudgeTime = Self.nudgeDate()
+    @State private var selectedWorkDays: Set<Int> = AppPreferences.workDays
+    @State private var holidaysEnabled = AppPreferences.holidaysEnabled
+    @State private var travelCounts = AppPreferences.dayTypesCountingTowardTarget.contains("travel")
+    @State private var vacationCounts = AppPreferences.dayTypesCountingTowardTarget.contains("vacation")
+    @State private var holidayCounts = AppPreferences.dayTypesCountingTowardTarget.contains("holiday")
+    @State private var creditCounts = AppPreferences.dayTypesCountingTowardTarget.contains("freeDay")
     @State private var detectionRadius: Double = 820
     @State private var showAddOffice = false
     @State private var currentYearHolidays: [AttendanceViewModel.ManagedHoliday] = []
@@ -43,6 +49,14 @@ struct SettingsView: View {
 
                     // MARK: - Goals
                     goalsSection
+                        .padding(.bottom, 24)
+
+                    // MARK: - Work Schedule
+                    workScheduleSection
+                        .padding(.bottom, 24)
+
+                    // MARK: - Target Counting
+                    targetCountingSection
                         .padding(.bottom, 24)
 
                     // MARK: - Notifications & Status
@@ -84,6 +98,13 @@ struct SettingsView: View {
             targetDaysPerQuarter = QuarterHelper.targetDaysPerQuarter
             nudgeWeekday = AppPreferences.nudgeWeekday
             nudgeTime = Self.nudgeDate()
+            selectedWorkDays = AppPreferences.workDays
+            holidaysEnabled = AppPreferences.holidaysEnabled
+            let targetTypes = AppPreferences.dayTypesCountingTowardTarget
+            travelCounts = targetTypes.contains("travel")
+            vacationCounts = targetTypes.contains("vacation")
+            holidayCounts = targetTypes.contains("holiday")
+            creditCounts = targetTypes.contains("freeDay")
             if let firstOffice = viewModel.offices().first {
                 detectionRadius = firstOffice.geofenceRadius * 3.28084
             }
@@ -245,26 +266,10 @@ struct SettingsView: View {
     }
 
     private func officeSubtitle(_ office: OfficeLocation) -> String {
-        let name = office.name.lowercased()
-        if name.contains("hq") || name.contains("newark") {
-            return "Primary Hub - Delaware"
-        } else if name.contains("sterling") {
-            return "Satellite - Virginia"
-        } else if name.contains("reston") {
-            return "Satellite - Virginia"
-        } else if name.contains("indianapolis") {
-            return "Regional - Indiana"
-        } else if name.contains("newton") {
-            return "Regional - Massachusetts"
-        } else if name.contains("new castle") {
-            return "Satellite - Delaware"
-        } else if name.contains("salt lake") {
-            return "Regional - Utah"
-        } else if office.isCustom {
+        if office.isCustom {
             return "Custom Office"
-        } else {
-            return office.address
         }
+        return office.address
     }
 
     // MARK: - Tracking Logic Section
@@ -578,6 +583,141 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Work Schedule Section
+
+    private var workScheduleSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("WORK SCHEDULE")
+
+            VStack(spacing: 0) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Theme.accent.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "calendar.day.timeline.left")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Work Days")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.onSurface)
+                        Text("Select which days you go into the office")
+                            .font(.caption)
+                            .foregroundStyle(Theme.onSurfaceVariant)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+
+                HStack(spacing: 6) {
+                    ForEach(0..<7, id: \.self) { i in
+                        let weekday = i + 1
+                        let isSelected = selectedWorkDays.contains(weekday)
+                        Button {
+                            if isSelected {
+                                if selectedWorkDays.count > 1 { selectedWorkDays.remove(weekday) }
+                            } else {
+                                selectedWorkDays.insert(weekday)
+                            }
+                            AppPreferences.setWorkDays(selectedWorkDays)
+                            viewModel.refreshSnapshot()
+                        } label: {
+                            Text(Self.weekdayLabels[i])
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(isSelected ? .white : Theme.onSurfaceVariant)
+                                .frame(width: 38, height: 34)
+                                .background(RoundedRectangle(cornerRadius: 8).fill(isSelected ? Theme.accent : Theme.surfaceContainer))
+                        }
+                        .buttonStyle(PressableButtonStyle())
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 14)
+            }
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
+        }
+    }
+
+    // MARK: - Target Counting Section
+
+    private var targetCountingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("COUNTS TOWARD TARGET")
+
+            VStack(spacing: 0) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Theme.vacation.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "checklist")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.vacation)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Day Types")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.onSurface)
+                        Text("Office days always count. Toggle others below.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.onSurfaceVariant)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+
+                Divider().padding(.leading, 16)
+
+                settingsTargetToggle(label: "Travel", icon: "car.fill", isOn: $travelCounts)
+                Divider().padding(.leading, 52)
+                settingsTargetToggle(label: "Vacation", icon: "airplane", isOn: $vacationCounts)
+                Divider().padding(.leading, 52)
+                settingsTargetToggle(label: "Holidays", icon: "star.fill", isOn: $holidayCounts)
+                Divider().padding(.leading, 52)
+                settingsTargetToggle(label: "Office Credit", icon: "checkmark.seal.fill", isOn: $creditCounts)
+            }
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
+        }
+        .onChange(of: travelCounts) { _, _ in saveTargetCountPrefs() }
+        .onChange(of: vacationCounts) { _, _ in saveTargetCountPrefs() }
+        .onChange(of: holidayCounts) { _, _ in saveTargetCountPrefs() }
+        .onChange(of: creditCounts) { _, _ in saveTargetCountPrefs() }
+    }
+
+    private func settingsTargetToggle(label: String, icon: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.onSurfaceVariant)
+                .frame(width: 24)
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(Theme.onSurface)
+            Spacer()
+            Toggle("", isOn: isOn)
+                .tint(Theme.accent)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private func saveTargetCountPrefs() {
+        var types: Set<String> = ["office"]
+        if travelCounts { types.insert("travel") }
+        if vacationCounts { types.insert("vacation") }
+        if holidayCounts { types.insert("holiday") }
+        if creditCounts { types.insert("freeDay") }
+        AppPreferences.setDayTypesCountingTowardTarget(types)
+        viewModel.refreshSnapshot()
+    }
+
     // MARK: - Notifications Section
 
     private var notificationsSection: some View {
@@ -734,6 +874,29 @@ struct SettingsView: View {
             sectionHeader("HOLIDAYS", count: "\(currentYearHolidays.count) Upcoming")
 
             VStack(spacing: 0) {
+                // US Federal Holidays toggle
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("US Federal Holidays")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.onSurface)
+                        Text("Auto-populate federal holidays each year")
+                            .font(.caption)
+                            .foregroundStyle(Theme.onSurfaceVariant)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $holidaysEnabled)
+                        .tint(Theme.accent)
+                        .labelsHidden()
+                        .onChange(of: holidaysEnabled) { _, newValue in
+                            AppPreferences.setHolidaysEnabled(newValue)
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                Divider().foregroundStyle(Theme.outlineVariant.opacity(0.3)).padding(.leading, 16)
+
                 let holidays = Array(currentYearHolidays.prefix(5))
                 ForEach(Array(holidays.enumerated()), id: \.element.id) { index, holiday in
                     if index > 0 {
@@ -1383,7 +1546,7 @@ struct AddOfficeSheet: View {
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(Theme.textTertiary)
                         .tracking(1.5)
-                    TextField("e.g. Newark HQ", text: $name)
+                    TextField("e.g. Main Office", text: $name)
                         .font(.body)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)

@@ -56,6 +56,57 @@ enum AppPreferences {
         UserDefaults.standard.set(minute, forKey: nudgeMinuteKey)
     }
 
+    // MARK: - Work Days
+
+    private static let workDaysKey = "workDays"
+    /// Default work days: Mon(2) through Fri(6) in Calendar weekday numbering
+    static let defaultWorkDays: Set<Int> = [2, 3, 4, 5, 6]
+
+    static var workDays: Set<Int> {
+        if let stored = UserDefaults.standard.array(forKey: workDaysKey) as? [Int], !stored.isEmpty {
+            return Set(stored)
+        }
+        return defaultWorkDays
+    }
+
+    static func setWorkDays(_ days: Set<Int>) {
+        UserDefaults.standard.set(Array(days).sorted(), forKey: workDaysKey)
+    }
+
+    static func isWorkDay(_ date: Date) -> Bool {
+        let weekday = Calendar.current.component(.weekday, from: date)
+        return workDays.contains(weekday)
+    }
+
+    // MARK: - Counts Toward Target
+
+    private static let targetCountsKey = "dayTypesCountTowardTarget"
+
+    /// Day types that count toward the attendance target. Default: office, travel, credit, holiday, vacation
+    static var dayTypesCountingTowardTarget: Set<String> {
+        if let stored = UserDefaults.standard.array(forKey: targetCountsKey) as? [String], !stored.isEmpty {
+            return Set(stored)
+        }
+        return Set(["office", "freeDay", "travel", "holiday", "vacation"])
+    }
+
+    static func setDayTypesCountingTowardTarget(_ types: Set<String>) {
+        UserDefaults.standard.set(Array(types).sorted(), forKey: targetCountsKey)
+    }
+
+    // MARK: - Holidays
+
+    private static let holidaysEnabledKey = "holidaysEnabled"
+
+    static var holidaysEnabled: Bool {
+        if UserDefaults.standard.object(forKey: holidaysEnabledKey) == nil { return true }
+        return UserDefaults.standard.bool(forKey: holidaysEnabledKey)
+    }
+
+    static func setHolidaysEnabled(_ enabled: Bool) {
+        UserDefaults.standard.set(enabled, forKey: holidaysEnabledKey)
+    }
+
 }
 
 struct QuarterHelper {
@@ -73,8 +124,7 @@ struct QuarterHelper {
             var count = 0
             var current = startDate
             while current <= endDate {
-                let weekday = Calendar.current.component(.weekday, from: current)
-                if weekday >= 2 && weekday <= 6 { count += 1 }
+                if AppPreferences.isWorkDay(current) { count += 1 }
                 current = Calendar.current.date(byAdding: .day, value: 1, to: current)!
             }
             return count
@@ -121,8 +171,7 @@ struct QuarterHelper {
         var count = 0
         var current = start
         while current <= quarter.endDate {
-            let weekday = cal.component(.weekday, from: current)
-            if weekday >= 2 && weekday <= 6 { count += 1 }
+            if AppPreferences.isWorkDay(current) { count += 1 }
             current = cal.date(byAdding: .day, value: 1, to: current)!
         }
         return count
