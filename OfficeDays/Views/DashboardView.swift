@@ -58,11 +58,11 @@ struct DashboardView: View {
 
     private var paceColor: Color {
         switch pace {
-        case .complete: return Theme.vacation
-        case .onTrack: return Theme.vacation
-        case .tight: return Theme.planned
-        case .atRisk: return Color.dynamic(light: 0xF97316, dark: 0xFB923C)
-        case .offTrack: return Theme.behind
+        case .complete: return Theme.onTrack          // Blue
+        case .onTrack: return Theme.vacation           // Green
+        case .tight: return Theme.planned              // Amber
+        case .atRisk: return Color.dynamic(light: 0xF97316, dark: 0xFB923C) // Red-ish (amber-red)
+        case .offTrack: return Theme.behind            // Red
         }
     }
 
@@ -166,24 +166,20 @@ struct DashboardView: View {
             }
             .padding(9)
 
-            // Pace badge
-            HStack(spacing: 5) {
+            // Pace badge – large circle
+            VStack(spacing: 4) {
                 Image(systemName: pace.icon)
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 22, weight: .bold))
                 Text(pace.label.uppercased())
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(0.8)
+                    .font(.system(size: 9, weight: .heavy))
+                    .tracking(0.6)
             }
-            .foregroundStyle(paceColor)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
+            .foregroundStyle(.white)
+            .frame(width: 72, height: 72)
             .background(
-                Capsule()
-                    .fill(paceColor.opacity(0.15))
-                    .overlay(
-                        Capsule()
-                            .stroke(paceColor.opacity(0.3), lineWidth: 1)
-                    )
+                Circle()
+                    .fill(paceColor)
+                    .shadow(color: paceColor.opacity(0.4), radius: 6, y: 3)
             )
             .padding(.top, 4)
 
