@@ -27,7 +27,7 @@ struct DashboardView: View {
     }
 
     private var daysRemaining: Int {
-        max(0, target - creditedDays)
+        max(0, target - creditedDays - snap.futureCreditedDays - snap.plannedDays)
     }
 
     private var weeksRemaining: Int {
@@ -39,7 +39,7 @@ struct DashboardView: View {
     }
 
     private var pace: QuarterHelper.PaceStatus {
-        QuarterHelper.paceStatus(officeDays: creditedDays, in: quarter, asOf: Date())
+        QuarterHelper.paceStatus(officeDays: creditedDays + snap.futureCreditedDays + snap.plannedDays, in: quarter, asOf: Date())
     }
 
     private var progress: Double {
@@ -47,9 +47,14 @@ struct DashboardView: View {
         return min(1.0, Double(creditedDays) / Double(target))
     }
 
+    private var futureCreditedProgress: Double {
+        guard target > 0 else { return 0 }
+        return min(1.0, Double(creditedDays + snap.futureCreditedDays) / Double(target))
+    }
+
     private var projectedProgress: Double {
         guard target > 0 else { return 0 }
-        return min(1.0, Double(creditedDays + snap.plannedDays) / Double(target))
+        return min(1.0, Double(creditedDays + snap.futureCreditedDays + snap.plannedDays) / Double(target))
     }
 
     private var todayAttendance: AttendanceDay? {
@@ -118,7 +123,7 @@ struct DashboardView: View {
                     .stroke(Theme.surfaceContainer, lineWidth: 18)
                     .frame(width: 200, height: 200)
 
-                // Projected (planned) arc
+                // Planned (orange) arc – outermost
                 if snap.plannedDays > 0 {
                     Circle()
                         .trim(from: 0, to: animateProgress ? projectedProgress : 0)
@@ -130,7 +135,19 @@ struct DashboardView: View {
                         .rotationEffect(.degrees(-90))
                 }
 
-                // Credited days arc
+                // Future credited (light blue) arc – middle
+                if snap.futureCreditedDays > 0 {
+                    Circle()
+                        .trim(from: 0, to: animateProgress ? futureCreditedProgress : 0)
+                        .stroke(
+                            Theme.accent.opacity(0.3),
+                            style: StrokeStyle(lineWidth: 18, lineCap: .round)
+                        )
+                        .frame(width: 200, height: 200)
+                        .rotationEffect(.degrees(-90))
+                }
+
+                // Credited days (blue) arc – innermost, on top
                 Circle()
                     .trim(from: 0, to: animateProgress ? progress : 0)
                     .stroke(
@@ -166,9 +183,10 @@ struct DashboardView: View {
             .padding(9)
 
             // Ring legend
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
                 legendSquare(color: Theme.accent, label: "Credited")
-                legendSquare(color: Theme.planned, label: "Planned")
+                legendSquare(color: Theme.accent.opacity(0.3), label: "Upcoming")
+                legendSquare(color: Theme.planned.opacity(0.35), label: "Planned")
             }
             .padding(.top, 2)
 

@@ -22,9 +22,17 @@ final class AttendanceViewModel {
         var holidayDays: Int = 0
         var officeCreditDays: Int = 0
         var travelDays: Int = 0
+        /// Future credited days (vacation, holiday, credit, travel scheduled after today)
+        var futureCreditedDays: Int = 0
 
+        /// Credited days up to and including today
         var targetDays: Int {
             officeDays + officeCreditDays + travelDays + holidayDays + vacationDays
+        }
+
+        /// Total credited including future
+        var totalCredited: Int {
+            targetDays + futureCreditedDays
         }
     }
 
@@ -116,17 +124,27 @@ final class AttendanceViewModel {
         )
         let days = fetch(descriptor, userMessage: "Unable to refresh the current quarter.")
 
+        let todayKey = AttendanceDay.key(for: Date())
         var snapshot = QuarterSnapshot()
         for day in days {
+            let isFuture = day.dateKey > todayKey
             switch day.dayType {
-            case .office: snapshot.officeDays += 1
-            case .planned: snapshot.plannedDays += 1
-            case .vacation: snapshot.vacationDays += 1
-            case .holiday: snapshot.holidayDays += 1
-            case .freeDay:
-                snapshot.officeCreditDays += 1
-            case .travel:
-                snapshot.travelDays += 1
+            case .office:
+                snapshot.officeDays += 1
+            case .planned:
+                snapshot.plannedDays += 1
+            case .vacation, .holiday, .freeDay, .travel:
+                if isFuture {
+                    snapshot.futureCreditedDays += 1
+                } else {
+                    switch day.dayType {
+                    case .vacation: snapshot.vacationDays += 1
+                    case .holiday: snapshot.holidayDays += 1
+                    case .freeDay: snapshot.officeCreditDays += 1
+                    case .travel: snapshot.travelDays += 1
+                    default: break
+                    }
+                }
             default: break
             }
         }
