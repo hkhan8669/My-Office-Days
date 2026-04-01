@@ -335,9 +335,10 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
                 return
             }
 
-            // Allow geofence to override remote days even if manually set,
+            // Allow geofence to override remote and planned days even if manually set,
             // but respect manual overrides for other types (vacation, holiday, etc.)
-            if let existing, existing.isManualOverride, existing.dayType != .remote {
+            if let existing, existing.isManualOverride,
+               existing.dayType != .remote, existing.dayType != .planned {
                 return
             }
 
