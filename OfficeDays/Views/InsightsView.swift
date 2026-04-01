@@ -240,9 +240,10 @@ struct InsightsView: View {
         let currentYear = Calendar.current.component(.year, from: Date())
         var days: [AttendanceDay] = []
         for year in (currentYear - 2)...currentYear {
-            for q in PeriodHelper.allQuarters(for: year) {
-                days.append(contentsOf: viewModel.allDays(in: q))
-            }
+            let yearPeriod = PeriodHelper.yearInfo(
+                for: Calendar.current.date(from: DateComponents(year: year, month: 6, day: 15))!
+            )
+            days.append(contentsOf: viewModel.allDays(in: yearPeriod))
         }
         var seen = Set<String>()
         return days.filter { seen.insert($0.dateKey).inserted }

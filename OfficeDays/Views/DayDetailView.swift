@@ -97,7 +97,7 @@ struct DayDetailView: View {
                             .foregroundStyle(Theme.textSecondary)
                     }
                     if selectedType.countsTowardTarget {
-                        Text("Counts toward your quarterly target")
+                        Text("Counts toward your \(AppPreferences.trackingPeriod.shortLabel.lowercased()) target")
                             .font(.caption2)
                             .foregroundStyle(Theme.vacation)
                     }

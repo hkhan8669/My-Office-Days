@@ -284,6 +284,3 @@ struct PeriodSummaryView: View {
         "\(DateHelper.shortDateString(for: p.startDate)) \u{2013} \(DateHelper.shortDateString(for: p.endDate))"
     }
 }
-
-/// Legacy name alias
-typealias QuarterSummaryView = PeriodSummaryView
