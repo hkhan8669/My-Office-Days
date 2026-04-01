@@ -74,7 +74,6 @@ struct DashboardView: View {
                 VStack(spacing: 28) {
                     progressRingSection
                     currentStatusSection
-                    statBlocks
                     recentActivitySection
                     infoCardsSection
                 }
@@ -166,21 +165,45 @@ struct DashboardView: View {
             }
             .padding(9)
 
-            // Pace badge – large circle
-            VStack(spacing: 4) {
-                Image(systemName: pace.icon)
-                    .font(.system(size: 22, weight: .bold))
-                Text(pace.label.uppercased())
-                    .font(.system(size: 9, weight: .heavy))
-                    .tracking(0.6)
+            // Ring legend
+            HStack(spacing: 16) {
+                legendDot(color: Theme.accent, label: "Credited")
+                if snap.plannedDays > 0 {
+                    legendDot(color: Theme.planned, label: "Planned")
+                }
             }
-            .foregroundStyle(.white)
-            .frame(width: 72, height: 72)
-            .background(
-                Circle()
-                    .fill(paceColor)
-                    .shadow(color: paceColor.opacity(0.4), radius: 6, y: 3)
-            )
+            .padding(.top, 2)
+
+            // Pace badge – large circle with velocity stats
+            VStack(spacing: 10) {
+                VStack(spacing: 4) {
+                    Image(systemName: pace.icon)
+                        .font(.system(size: 22, weight: .bold))
+                    Text(pace.label.uppercased())
+                        .font(.system(size: 9, weight: .heavy))
+                        .tracking(0.6)
+                }
+                .foregroundStyle(.white)
+                .frame(width: 72, height: 72)
+                .background(
+                    Circle()
+                        .fill(paceColor)
+                        .shadow(color: paceColor.opacity(0.4), radius: 6, y: 3)
+                )
+
+                // Velocity details
+                HStack(spacing: 20) {
+                    velocityStat(value: "\(daysRemaining)", label: "to go")
+                    velocityStat(value: "\(weekdaysRemaining)", label: "work days left")
+                    if daysRemaining > 0, weeksRemaining > 0 {
+                        velocityStat(
+                            value: String(format: "%.1f", Double(daysRemaining) / Double(weeksRemaining)),
+                            label: "days/week"
+                        )
+                    }
+                }
+                .padding(.top, 2)
+            }
             .padding(.top, 4)
 
             NavigationLink {
@@ -277,66 +300,28 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Stat Blocks
+    // MARK: - Legend & Velocity Helpers
 
-    private var statBlocks: some View {
-        VStack(spacing: 12) {
-            statBlock(
-                label: "Threshold Goal",
-                value: "\(daysRemaining) Days Remaining",
-                description: daysRemaining > 0
-                    ? "You need \(daysRemaining) more credited days to hit \(target) this quarter."
-                    : "Quarterly target of \(target) days has been reached.",
-                systemIcon: "arrow.triangle.2.circlepath",
-                color: Theme.accent
-            )
-
-            statBlock(
-                label: "Quarter Capacity",
-                value: "\(weekdaysRemaining) Work Days Left",
-                description: "\(weeksRemaining) weeks remaining in \(quarter.label). Plan ahead to stay on track.",
-                systemIcon: "clock.badge.checkmark",
-                color: Theme.primaryContainer
-            )
+    private func legendDot(color: Color, label: String) -> some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Theme.textSecondary)
         }
     }
 
-    private func statBlock(
-        label: String,
-        value: String,
-        description: String,
-        systemIcon: String,
-        color: Color
-    ) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(color.opacity(0.1))
-                    .frame(width: 40, height: 40)
-                Image(systemName: systemIcon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(color)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(label.uppercased())
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.textTertiary)
-                    .tracking(1.2)
-
-                Text(value)
-                    .font(.headline)
-                    .foregroundStyle(Theme.textPrimary)
-
-                Text(description)
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
-            }
-
-            Spacer(minLength: 0)
+    private func velocityStat(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.textPrimary)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Theme.textTertiary)
         }
-        .cardStyle(cornerRadius: 16, padding: 16)
     }
 
     // MARK: - Recent Activity
@@ -453,24 +438,9 @@ struct DashboardView: View {
     // MARK: - Info Cards
 
     private var infoCardsSection: some View {
-        let futureHolidays = viewModel.futureHolidaysInQuarter()
-        let futureVacations = viewModel.futureVacationsInQuarter()
-        let availableWorkdays = max(0, weekdaysRemaining - futureHolidays - futureVacations)
         let daysPerWeek = weeksRemaining > 0 ? Double(daysRemaining) / Double(weeksRemaining) : 0
 
         return VStack(spacing: 12) {
-            // Upcoming buffer card
-            infoCard(
-                icon: "calendar.badge.exclamationmark",
-                title: "Upcoming Buffer",
-                subtitle: bufferSubtitle(
-                    futureHolidays: futureHolidays,
-                    futureVacations: futureVacations,
-                    availableWorkdays: availableWorkdays
-                ),
-                color: Theme.planned
-            )
-
             // Policy / pace card
             infoCard(
                 icon: "gauge.with.dots.needle.33percent",
@@ -480,22 +450,7 @@ struct DashboardView: View {
                     : "You have met the \(target)-day target for \(quarter.label).",
                 color: daysRemaining > 0 ? Theme.accent : Theme.vacation
             )
-
         }
-    }
-
-    private func bufferSubtitle(futureHolidays: Int, futureVacations: Int, availableWorkdays: Int) -> String {
-        var parts: [String] = []
-        if futureHolidays > 0 {
-            parts.append("\(futureHolidays) holiday\(futureHolidays == 1 ? "" : "s")")
-        }
-        if futureVacations > 0 {
-            parts.append("\(futureVacations) vacation day\(futureVacations == 1 ? "" : "s")")
-        }
-        if parts.isEmpty {
-            return "\(availableWorkdays) available work days remaining this quarter."
-        }
-        return "\(parts.joined(separator: " and ")) upcoming. \(availableWorkdays) work days available."
     }
 
     private func infoCard(icon: String, title: String, subtitle: String, color: Color) -> some View {
