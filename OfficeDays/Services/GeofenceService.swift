@@ -25,6 +25,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     @Published var isMonitoring = false
     @Published var errorMessage: String?
     @Published var statusMessage = "Auto tracking is off"
+    @Published var requiresAlwaysPermission = false
 
     var isTrackingEnabled: Bool {
         AppPreferences.trackingEnabled
@@ -70,6 +71,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
     func disableTracking() {
         AppPreferences.setTrackingEnabled(false)
+        requiresAlwaysPermission = false
         stopMonitoring()
         notificationService.removeMondayNotification()
         refreshStatusMessage()
@@ -140,6 +142,18 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         refreshMonitoring()
         scheduleMondayReminder()
 
+        // Enforce "Always" permission when tracking is enabled.
+        // If the user changed it to "While Using" or denied, flag it
+        // so the UI can show a blocking prompt.
+        if AppPreferences.trackingEnabled && authorizationStatus != .authorizedAlways {
+            requiresAlwaysPermission = true
+            if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .notDetermined {
+                locationManager.requestAlwaysAuthorization()
+            }
+        } else {
+            requiresAlwaysPermission = false
+        }
+
         for region in locationManager.monitoredRegions {
             if let circularRegion = region as? CLCircularRegion {
                 locationManager.requestState(for: circularRegion)
@@ -156,11 +170,15 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
 
-        // When the user grants "When In Use" from the initial prompt, iOS requires
-        // a second requestAlwaysAuthorization() call to show the upgrade prompt
-        // that lets the user choose "Change to Always Allow."
-        if authorizationStatus == .authorizedWhenInUse && AppPreferences.trackingEnabled {
-            locationManager.requestAlwaysAuthorization()
+        if authorizationStatus == .authorizedAlways {
+            requiresAlwaysPermission = false
+        } else if AppPreferences.trackingEnabled {
+            requiresAlwaysPermission = true
+            // When the user grants "When In Use" from the initial prompt, iOS requires
+            // a second requestAlwaysAuthorization() call to show the upgrade prompt.
+            if authorizationStatus == .authorizedWhenInUse {
+                locationManager.requestAlwaysAuthorization()
+            }
         }
 
         refreshMonitoring()

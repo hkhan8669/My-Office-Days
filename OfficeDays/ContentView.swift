@@ -23,8 +23,15 @@ struct ContentView: View {
                         SplashView(isActive: $showSplash)
                             .transition(.opacity)
                     }
+
+                    // Blocking overlay when Always permission is required
+                    if geofenceService.requiresAlwaysPermission && !showSplash {
+                        AlwaysLocationRequiredView(geofenceService: geofenceService)
+                            .transition(.opacity)
+                    }
                 }
                 .animation(.easeInOut(duration: 0.4), value: showSplash)
+                .animation(.easeInOut(duration: 0.3), value: geofenceService.requiresAlwaysPermission)
                 .sheet(isPresented: $showTrackingOnboarding) {
                     TrackingOnboardingView(
                         geofenceService: geofenceService,
@@ -227,5 +234,103 @@ private struct TrackingOnboardingView: View {
             RoundedRectangle(cornerRadius: 18)
                 .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
         )
+    }
+}
+
+// MARK: - Always Location Required
+
+private struct AlwaysLocationRequiredView: View {
+    @ObservedObject var geofenceService: GeofenceService
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.6).ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.behind.opacity(0.15))
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "location.slash.fill")
+                        .font(.system(size: 32, weight: .semibold))
+                        .foregroundStyle(Theme.behind)
+                }
+
+                VStack(spacing: 8) {
+                    Text("Location Set to \"Always\"")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+
+                    Text("Office Days requires \"Always\" location access to detect when you arrive at the office — even when the app is closed or your phone restarts.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                VStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "1.circle.fill")
+                            .foregroundStyle(Theme.accent)
+                        Text("Open **Settings** below")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer()
+                    }
+                    HStack(spacing: 8) {
+                        Image(systemName: "2.circle.fill")
+                            .foregroundStyle(Theme.accent)
+                        Text("Tap **Location** → **Always**")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer()
+                    }
+                    HStack(spacing: 8) {
+                        Image(systemName: "3.circle.fill")
+                            .foregroundStyle(Theme.accent)
+                        Text("Come back — tracking resumes automatically")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.textPrimary)
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 8)
+
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gear")
+                            .font(.headline)
+                        Text("Open Settings")
+                            .font(.headline)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Theme.primaryGradient)
+                    )
+                }
+                .buttonStyle(PressableButtonStyle())
+
+                Button {
+                    geofenceService.disableTracking()
+                } label: {
+                    Text("Disable Tracking Instead")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+            }
+            .padding(28)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Theme.cardBackground)
+                    .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
+            )
+            .padding(.horizontal, 24)
+        }
     }
 }
