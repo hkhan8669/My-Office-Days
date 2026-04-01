@@ -987,15 +987,206 @@ private struct EditOfficeSheet: View {
 
     @State private var editName = ""
     @State private var editAddress = ""
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 39.6685, longitude: -75.7506),
+        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+    )
+
+    // Re-search state
+    @State private var searchQuery = ""
+    @State private var searchResults: [MKMapItem] = []
+    @State private var selectedMapItem: MKMapItem?
+    @State private var isSearching = false
+    @State private var isRelocating = false
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Office Details") {
-                    TextField("Name", text: $editName)
-                    TextField("Address", text: $editAddress, axis: .vertical)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    // Map preview
+                    ZStack(alignment: .bottomTrailing) {
+                        Map(coordinateRegion: $region, annotationItems: [MapPin(coordinate: currentCoordinate)]) { pin in
+                            MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                        }
+                        .frame(height: 220)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
+                        )
+
+                        // Apple Maps badge
+                        HStack(spacing: 4) {
+                            Image(systemName: "map.fill")
+                                .font(.system(size: 9, weight: .semibold))
+                            Text("Apple Maps")
+                                .font(.system(size: 9, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(.black.opacity(0.5))
+                        )
+                        .padding(10)
+                    }
+
+                    // Current address
+                    HStack(spacing: 8) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.caption)
+                            .foregroundStyle(Theme.accent)
+                        Text(editAddress)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 4)
+
+                    // Name field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("OFFICE NAME")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.textTertiary)
+                            .tracking(1.5)
+                        TextField("Office name", text: $editName)
+                            .font(.body)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Theme.surfaceContainerLow)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    // Change location
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                isRelocating.toggle()
+                                if !isRelocating {
+                                    searchQuery = ""
+                                    searchResults = []
+                                    selectedMapItem = nil
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: isRelocating ? "xmark.circle.fill" : "arrow.triangle.swap")
+                                    .font(.caption.weight(.semibold))
+                                Text(isRelocating ? "Cancel Relocation" : "Change Location")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .foregroundStyle(isRelocating ? Theme.behind : Theme.accent)
+                        }
+                        .buttonStyle(PressableButtonStyle())
+
+                        if isRelocating {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("SEARCH NEW ADDRESS")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(Theme.textTertiary)
+                                    .tracking(1.5)
+
+                                HStack {
+                                    Image(systemName: "magnifyingglass")
+                                        .foregroundStyle(Theme.textTertiary)
+                                    TextField("Search for an address...", text: $searchQuery)
+                                        .font(.body)
+                                        .onSubmit { performSearch() }
+                                    if isSearching {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    }
+                                    if !searchQuery.isEmpty {
+                                        Button {
+                                            searchQuery = ""
+                                            searchResults = []
+                                            selectedMapItem = nil
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundStyle(Theme.textTertiary)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(Theme.surfaceContainerLow)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                                // Search results
+                                if !searchResults.isEmpty && selectedMapItem == nil {
+                                    VStack(spacing: 0) {
+                                        ForEach(searchResults, id: \.self) { item in
+                                            Button {
+                                                selectMapItem(item)
+                                            } label: {
+                                                HStack(spacing: 10) {
+                                                    Image(systemName: "mappin.circle.fill")
+                                                        .font(.body)
+                                                        .foregroundStyle(Theme.accent)
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(item.name ?? "Unknown")
+                                                            .font(.subheadline.weight(.medium))
+                                                            .foregroundStyle(Theme.textPrimary)
+                                                        if let address = item.placemark.formattedAddress {
+                                                            Text(address)
+                                                                .font(.caption)
+                                                                .foregroundStyle(Theme.textSecondary)
+                                                                .lineLimit(2)
+                                                        }
+                                                    }
+                                                    Spacer()
+                                                    Image(systemName: "chevron.right")
+                                                        .font(.caption)
+                                                        .foregroundStyle(Theme.textTertiary)
+                                                }
+                                                .padding(.vertical, 10)
+                                            }
+                                            Divider()
+                                        }
+                                    }
+                                    .padding(.horizontal, 4)
+                                }
+
+                                if let selected = selectedMapItem {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(Theme.vacation)
+                                        Text(selected.placemark.formattedAddress ?? "New location selected")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.textSecondary)
+                                    }
+                                }
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+
+                    // Geofence radius info
+                    HStack(spacing: 8) {
+                        Image(systemName: "scope")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Theme.textTertiary)
+                        Text("Detection radius")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textTertiary)
+                        Spacer()
+                        Text("\(Int(office.geofenceRadius * 3.28084)) ft")
+                            .font(.system(.caption, design: .monospaced).weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Theme.surfaceContainerLow)
+                    )
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
+            .background(Theme.surfaceContainerLowest)
             .navigationTitle("Edit Office")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1003,20 +1194,71 @@ private struct EditOfficeSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Save") {
-                        viewModel.updateOfficeName(office, newName: editName)
-                        office.address = editAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-                        try? modelContext.save()
-                        dismiss()
-                    }
-                    .disabled(editName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button("Save") { save() }
+                        .disabled(editName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .fontWeight(.semibold)
                 }
             }
             .onAppear {
                 editName = office.name
                 editAddress = office.address
+                region = MKCoordinateRegion(
+                    center: office.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
+            }
+            .onChange(of: searchQuery) { _, newValue in
+                guard newValue.count >= 3 else {
+                    searchResults = []
+                    return
+                }
+                performSearch()
             }
         }
+    }
+
+    private var currentCoordinate: CLLocationCoordinate2D {
+        selectedMapItem?.placemark.coordinate ?? office.coordinate
+    }
+
+    private func performSearch() {
+        isSearching = true
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = searchQuery
+        request.resultTypes = .address
+
+        let search = MKLocalSearch(request: request)
+        search.start { response, error in
+            DispatchQueue.main.async {
+                isSearching = false
+                if let response {
+                    searchResults = Array(response.mapItems.prefix(8))
+                }
+            }
+        }
+    }
+
+    private func selectMapItem(_ item: MKMapItem) {
+        selectedMapItem = item
+        let coord = item.placemark.coordinate
+        region = MKCoordinateRegion(
+            center: coord,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        editAddress = item.placemark.formattedAddress ?? searchQuery
+    }
+
+    private func save() {
+        viewModel.updateOfficeName(office, newName: editName)
+        office.address = editAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let selected = selectedMapItem {
+            office.latitude = selected.placemark.coordinate.latitude
+            office.longitude = selected.placemark.coordinate.longitude
+        }
+
+        try? modelContext.save()
+        dismiss()
     }
 }
 
@@ -1131,15 +1373,32 @@ struct AddOfficeSheet: View {
                 } else if let selected = selectedMapItem {
                     // Show map preview
                     VStack(spacing: 8) {
-                        Map(coordinateRegion: .constant(region), annotationItems: [MapPin(coordinate: selected.placemark.coordinate)]) { pin in
-                            MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                        ZStack(alignment: .bottomTrailing) {
+                            Map(coordinateRegion: .constant(region), annotationItems: [MapPin(coordinate: selected.placemark.coordinate)]) { pin in
+                                MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                            }
+                            .frame(height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
+                            )
+
+                            HStack(spacing: 4) {
+                                Image(systemName: "map.fill")
+                                    .font(.system(size: 9, weight: .semibold))
+                                Text("Apple Maps")
+                                    .font(.system(size: 9, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(.black.opacity(0.5))
+                            )
+                            .padding(10)
                         }
-                        .frame(height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5)
-                        )
 
                         HStack(spacing: 6) {
                             Image(systemName: "checkmark.circle.fill")
