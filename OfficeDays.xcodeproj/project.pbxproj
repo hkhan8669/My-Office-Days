@@ -251,7 +251,7 @@
 				DEVELOPMENT_TEAM = 5ZBZ278LX6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OfficeDays/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Office Days";
+				INFOPLIST_KEY_CFBundleDisplayName = "My Office Days";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -299,7 +299,7 @@
 				DEVELOPMENT_TEAM = 5ZBZ278LX6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OfficeDays/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Office Days";
+				INFOPLIST_KEY_CFBundleDisplayName = "My Office Days";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
