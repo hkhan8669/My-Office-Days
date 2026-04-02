@@ -527,7 +527,7 @@ private struct OnboardingFlowView: View {
                             Text("US Federal Holidays")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Theme.onSurface)
-                            Text("Auto-populate 13 holidays each year (includes Good Friday)")
+                            Text("Auto-populate 12 US federal holidays each year")
                                 .font(.caption)
                                 .foregroundStyle(Theme.onSurfaceVariant)
                         }

@@ -148,7 +148,7 @@ enum AppPreferences {
 
     private static let targetCountsKey = "dayTypesCountTowardTarget"
 
-    /// Day types that count toward the attendance target. Default: office, travel, credit, holiday, vacation
+    /// Day types that count toward the attendance target. Default: office, freeDay, travel, holiday, vacation
     static var dayTypesCountingTowardTarget: Set<String> {
         if let stored = UserDefaults.standard.array(forKey: targetCountsKey) as? [String], !stored.isEmpty {
             return Set(stored)

@@ -380,12 +380,16 @@ final class AttendanceViewModel {
     }
 
     func addHoliday(date: Date, name: String) {
-        applyDayType(date: date, type: .holiday, notes: name)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        applyDayType(date: date, type: .holiday, notes: trimmed)
         saveAndRefresh(userMessage: "Unable to add the holiday.")
     }
 
     /// Add a holiday on the same month/day for multiple subsequent years.
     func addHolidayRepeating(date: Date, name: String, throughYear: Int) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
         let calendar = Calendar.current
         let baseYear = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
@@ -398,7 +402,7 @@ final class AttendanceViewModel {
                 if let existing = attendanceDay(for: normalized), existing.dayType != .holiday {
                     continue
                 }
-                applyDayType(date: normalized, type: .holiday, notes: name)
+                applyDayType(date: normalized, type: .holiday, notes: trimmed)
             }
         }
         saveAndRefresh(userMessage: "Unable to add recurring holidays.")
@@ -413,6 +417,7 @@ final class AttendanceViewModel {
 
     /// Delete all holidays with the same name across all years.
     func deleteHolidayAllYears(name: String) {
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let holidayType = DayType.holiday.rawValue
         let descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
@@ -432,7 +437,7 @@ final class AttendanceViewModel {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let currentYear = calendar.component(.year, from: Date())
-        let endOfYear = calendar.date(from: DateComponents(year: currentYear, month: 12, day: 31))!
+        guard let endOfYear = calendar.date(from: DateComponents(year: currentYear, month: 12, day: 31)) else { return }
 
         let workDays = AppPreferences.workDays
 
@@ -462,7 +467,8 @@ final class AttendanceViewModel {
                     inserted = true
                 }
             }
-            current = calendar.date(byAdding: .day, value: 1, to: current)!
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = nextDay
         }
 
         if inserted || !existingAutoPlanned.isEmpty {

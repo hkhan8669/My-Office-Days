@@ -105,21 +105,10 @@ final class OfficeDaysTests: XCTestCase {
         }
     }
 
-    func testGoodFriday_fallsBeforeEasterSunday() {
-        // Good Friday is 2 days before Easter Sunday
+    func testHolidayCount_is12() {
         for year in 2024...2030 {
             let holidays = Holiday.companyHolidays(for: year)
-            guard let goodFriday = holidays.first(where: { $0.name == "Good Friday" }) else {
-                XCTFail("No Good Friday found for \(year)")
-                continue
-            }
-            let weekday = calendar.component(.weekday, from: goodFriday.date)
-            XCTAssertEqual(weekday, 6, "Good Friday \(year) should be a Friday (weekday 6), got \(weekday)")
-
-            // Verify it is exactly 2 days before a Sunday
-            let easterSunday = calendar.date(byAdding: .day, value: 2, to: goodFriday.date)!
-            let easterWeekday = calendar.component(.weekday, from: easterSunday)
-            XCTAssertEqual(easterWeekday, 1, "Easter Sunday derived from Good Friday \(year) should be Sunday (weekday 1)")
+            XCTAssertEqual(holidays.count, 12, "Expected 12 federal holidays for \(year), got \(holidays.count)")
         }
     }
 
@@ -185,7 +174,7 @@ final class OfficeDaysTests: XCTestCase {
 
     func testHolidays_allNamesPresent() {
         let expectedNames: Set<String> = [
-            "New Year's Day", "MLK Day", "Presidents' Day", "Good Friday",
+            "New Year's Day", "MLK Day", "Presidents' Day",
             "Memorial Day", "Juneteenth", "Independence Day", "Labor Day",
             "Columbus Day", "Veterans Day", "Thanksgiving",
             "Day after Thanksgiving", "Christmas"

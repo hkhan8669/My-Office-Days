@@ -138,12 +138,14 @@ struct DashboardView: View {
 
             // Stats breakdown
             VStack(spacing: 12) {
-                paceStatRow(label: "Credited office days", value: "\(creditedDays)")
+                paceStatRow(label: "Credited days", value: "\(creditedDays)")
                 if snap.futureCreditedDays > 0 {
                     paceStatRow(label: "Scheduled (holidays/vacation)", value: "\(snap.futureCreditedDays)")
                 }
                 paceStatRow(label: "\(AppPreferences.trackingPeriod.label) target", value: "\(target)")
-                paceStatRow(label: "Days still needed", value: "\(daysRemaining)")
+                if daysRemaining > 0 {
+                    paceStatRow(label: "Days still needed", value: "\(daysRemaining)")
+                }
                 if snap.plannedDays > 0 {
                     paceStatRow(label: "Planned office days", value: "\(snap.plannedDays)")
                 }
@@ -570,7 +572,7 @@ struct DashboardView: View {
                 title: daysRemaining > 0 ? "Required Pace" : "Target Complete",
                 subtitle: daysRemaining > 0
                     ? (weeksRemaining > 0
-                        ? String(format: "%.1f days per week needed across %d remaining week%@.", daysPerWeek, weeksRemaining, weeksRemaining == 1 ? "" : "s")
+                        ? "\(String(format: "%.1f", daysPerWeek)) days per week needed across \(weeksRemaining) remaining week\(weeksRemaining == 1 ? "" : "s")."
                         : "\(daysRemaining) day\(daysRemaining == 1 ? "" : "s") short — this \(AppPreferences.trackingPeriod.shortLabel.lowercased()) has ended.")
                     : "You have met the \(target)-day target for \(period.label).",
                 color: daysRemaining > 0 ? (weeksRemaining > 0 ? Theme.accent : Theme.behind) : Theme.vacation
