@@ -1113,6 +1113,42 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.outlineVariant.opacity(0.3))
                     .padding(.leading, 16)
                 infoRow("\(AppPreferences.trackingPeriod.label) Target", "\(PeriodHelper.targetDaysPerPeriod) days")
+                Divider()
+                    .foregroundStyle(Theme.outlineVariant.opacity(0.3))
+                    .padding(.leading, 16)
+
+                Button {
+                    sendFeedbackEmail()
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Theme.accent.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.accent)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Send Feedback")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.onSurface)
+                            Text("Let us know how we can improve")
+                                .font(.caption)
+                                .foregroundStyle(Theme.onSurfaceVariant)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.onSurfaceVariant)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
             }
             .background(
                 RoundedRectangle(cornerRadius: 14)
@@ -1122,6 +1158,17 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5)
             )
+        }
+    }
+
+    private func sendFeedbackEmail() {
+        let email = "feedback@myofficedays.app"
+        let subject = "My Office Days Feedback (v1.0.0)"
+        let body = "\n\n---\nApp Version: 1.0.0\niOS \(UIDevice.current.systemVersion)\n\(UIDevice.current.model)"
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)") {
+            UIApplication.shared.open(url)
         }
     }
 
