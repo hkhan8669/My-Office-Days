@@ -337,13 +337,9 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
                 return
             }
 
-            // Respect ALL manual overrides — never let geofence overwrite a
-            // user's explicit choice (manual office, vacation, holiday, etc.).
-            // Only auto-logged entries (remote, planned, earlier auto office)
-            // can be overridden.
-            if let existing, existing.isManualOverride {
-                return
-            }
+            // Physical presence is the ground truth — if the geofence
+            // detected you at an office, override whatever was set before
+            // (vacation by mistake, travel, planned, remote, etc.).
 
             if let existing {
                 existing.dayType = .office
