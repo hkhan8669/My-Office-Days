@@ -68,7 +68,6 @@ struct DashboardView: View {
         case .complete: return Theme.onTrack          // Blue
         case .onTrack: return Theme.vacation           // Green
         case .tight: return Theme.planned              // Amber
-        case .atRisk: return Color.dynamic(light: 0xF97316, dark: 0xFB923C) // Red-ish (amber-red)
         case .offTrack: return Theme.behind            // Red
         }
     }
@@ -172,9 +171,7 @@ struct DashboardView: View {
         case .onTrack:
             return "You need \(daysRemaining) more days across \(weeksRemaining) weeks — that's about \(String(format: "%.1f", Double(daysRemaining) / Double(max(1, weeksRemaining)))) days per week, which is a comfortable pace."
         case .tight:
-            return "You need \(daysRemaining) more days across \(weeksRemaining) weeks — roughly \(String(format: "%.1f", Double(daysRemaining) / Double(max(1, weeksRemaining)))) days per week. Doable, but you'll want to stay consistent."
-        case .atRisk:
-            return "You need \(daysRemaining) more days with only \(weeksRemaining) weeks left — that's about \(String(format: "%.1f", Double(daysRemaining) / Double(max(1, weeksRemaining)))) days per week. Consider planning extra office days soon."
+            return "You need \(daysRemaining) more days across \(weeksRemaining) weeks — roughly \(String(format: "%.1f", Double(daysRemaining) / Double(max(1, weeksRemaining)))) days per week. Stay consistent to hit your target."
         case .offTrack:
             if weeksRemaining == 0 {
                 return "This \(periodName) has ended with \(daysRemaining) days still remaining against your target of \(target)."

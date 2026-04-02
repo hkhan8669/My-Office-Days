@@ -339,14 +339,13 @@ struct PeriodHelper {
     // MARK: Pace
 
     enum PaceStatus {
-        case complete, onTrack, tight, atRisk, offTrack
+        case complete, onTrack, tight, offTrack
 
         var label: String {
             switch self {
             case .complete: "Complete"
             case .onTrack: "On Track"
             case .tight: "Tight"
-            case .atRisk: "At Risk"
             case .offTrack: "Off Track"
             }
         }
@@ -356,7 +355,6 @@ struct PeriodHelper {
             case .complete: "star.fill"
             case .onTrack: "checkmark.seal.fill"
             case .tight: "gauge.with.dots.needle.50percent"
-            case .atRisk: "exclamationmark.triangle.fill"
             case .offTrack: "xmark.octagon.fill"
             }
         }
@@ -373,8 +371,7 @@ struct PeriodHelper {
 
         let daysPerWeek = Double(remaining) / Double(weeks)
         if daysPerWeek <= 3.0 { return .onTrack }
-        if daysPerWeek <= 4.0 { return .tight }
-        if daysPerWeek <= 5.0 { return .atRisk }
+        if daysPerWeek <= 5.0 { return .tight }
         return .offTrack
     }
 }
