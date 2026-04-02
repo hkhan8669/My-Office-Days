@@ -8,13 +8,7 @@ struct PeriodSummaryView: View {
     private var trackingPeriod: TrackingPeriod { periodOverride ?? AppPreferences.trackingPeriod }
 
     private var periods: [PeriodInfo] {
-        switch trackingPeriod {
-        case .monthly: return PeriodHelper.allMonths(for: selectedYear)
-        case .quarterly: return PeriodHelper.allQuarters(for: selectedYear)
-        case .yearly:
-            let date = Calendar.current.date(from: DateComponents(year: selectedYear, month: 6, day: 15))!
-            return [PeriodHelper.yearInfo(for: date)]
-        }
+        PeriodHelper.allPeriods(for: selectedYear, period: trackingPeriod)
     }
 
     private var yearTotal: Int {

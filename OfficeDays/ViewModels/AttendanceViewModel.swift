@@ -543,9 +543,11 @@ final class AttendanceViewModel {
     func exportSpreadsheet(year: Int) -> String {
         let calendar = Calendar.current
         let startOfYear = calendar.date(from: DateComponents(year: year, month: 1, day: 1)) ?? Date()
-        let endOfYear = calendar.date(from: DateComponents(year: year, month: 12, day: 31)) ?? startOfYear
+        let today = calendar.startOfDay(for: Date())
+        // Only export up to today — no future/planned data
+        let endDate = min(today, calendar.date(from: DateComponents(year: year, month: 12, day: 31)) ?? today)
         let startKey = AttendanceDay.key(for: startOfYear)
-        let endKey = AttendanceDay.key(for: endOfYear)
+        let endKey = AttendanceDay.key(for: endDate)
 
         let descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
@@ -568,17 +570,22 @@ final class AttendanceViewModel {
                 .replacingOccurrences(of: "\"", with: "&quot;")
         }
 
-        func typeColor(_ type: DayType?) -> String {
-            guard let t = type else { return "#F3F4F6" }
-            switch t {
+        func typeColor(_ type: DayType) -> String {
+            switch type {
             case .office: return "#DBEAFE"
-            case .planned: return "#FEF3C7"
             case .vacation: return "#D1FAE5"
             case .holiday: return "#EDE9FE"
             case .freeDay: return "#E0F2FE"
             case .travel: return "#FEE2E2"
+            case .planned: return "#FEF3C7"
             case .remote: return "#F3F4F6"
             }
+        }
+
+        func loggedBy(_ day: AttendanceDay) -> String {
+            if day.dayType == .holiday { return "Auto" }
+            if day.isAutoLogged { return "Auto (Geo)" }
+            return "Manual"
         }
 
         var html = """
@@ -598,23 +605,30 @@ final class AttendanceViewModel {
         .ahead { color: #059669; font-weight: 600; }
         .behind { color: #DC2626; font-weight: 600; }
         .even { color: #6B7280; font-weight: 600; }
+        .geo { color: #2563EB; font-style: italic; font-size: 12px; }
+        .manual { color: #6B7280; font-size: 12px; }
         </style>
         </head><body>
         <div class="title">My Office Days — \(year)</div>
-        <div class="subtitle">Exported \(formatter.string(from: Date())) · \(AppPreferences.trackingPeriod.label) tracking · Target: \(PeriodHelper.targetDaysPerPeriod) days per \(AppPreferences.trackingPeriod.shortLabel.lowercased())</div>
+        <div class="subtitle">Exported \(formatter.string(from: Date())) · Data through \(formatter.string(from: endDate)) · Target: \(PeriodHelper.targetDaysPerPeriod) days per \(AppPreferences.trackingPeriod.shortLabel.lowercased())</div>
         <table>
-        <tr><th>Week</th><th>Date</th><th>Day</th><th>Type</th><th>Office / Notes</th></tr>
+        <tr><th>Week</th><th>Date</th><th>Day</th><th>Type</th><th>Office / Notes</th><th>Logged By</th></tr>
         """
 
         var current = startOfYear
-        while current <= endOfYear {
+        while current <= endDate {
             if AppPreferences.isWorkDay(current) {
                 let day = dayMap[AttendanceDay.key(for: current)]
-                let typeString = day?.dayType.shortLabel ?? "Unlogged"
-                let office = escapeHTML(day?.officeName ?? day?.holidayName ?? "")
-                let weekOfYear = calendar.component(.weekOfYear, from: current)
-                let bgColor = typeColor(day?.dayType)
-                html += "<tr><td>\(weekOfYear)</td><td>\(formatter.string(from: current))</td><td>\(weekdayFormatter.string(from: current))</td><td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(typeString)</span></td><td>\(office)</td></tr>\n"
+                // Skip planned and remote — only export actual attendance
+                if let day, day.dayType != .planned, day.dayType != .remote {
+                    let typeString = day.dayType.shortLabel
+                    let office = escapeHTML(day.officeName ?? day.holidayName ?? "")
+                    let weekOfYear = calendar.component(.weekOfYear, from: current)
+                    let bgColor = typeColor(day.dayType)
+                    let logged = loggedBy(day)
+                    let loggedCls = day.isAutoLogged ? "geo" : "manual"
+                    html += "<tr><td>\(weekOfYear)</td><td>\(formatter.string(from: current))</td><td>\(weekdayFormatter.string(from: current))</td><td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(typeString)</span></td><td>\(office)</td><td class=\"\(loggedCls)\">\(logged)</td></tr>\n"
+                }
             }
             guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
             current = nextDay

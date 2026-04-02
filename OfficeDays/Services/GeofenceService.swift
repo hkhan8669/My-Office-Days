@@ -331,14 +331,17 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
         do {
             let existing = try context.fetch(descriptor).first
-            if let existing, existing.dayType == .office {
+
+            // If already logged as office for THIS same office, nothing to do.
+            if let existing, existing.dayType == .office, existing.officeName == officeName {
                 return
             }
 
-            // Allow geofence to override remote and planned days even if manually set,
-            // but respect manual overrides for other types (vacation, holiday, etc.)
+            // Allow geofence to override remote, planned, and earlier auto-logged office days.
+            // But respect manual overrides for vacation, holiday, etc.
             if let existing, existing.isManualOverride,
-               existing.dayType != .remote, existing.dayType != .planned {
+               existing.dayType != .remote, existing.dayType != .planned,
+               existing.dayType != .office {
                 return
             }
 

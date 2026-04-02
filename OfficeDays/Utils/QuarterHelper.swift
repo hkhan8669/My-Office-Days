@@ -242,8 +242,8 @@ struct PeriodHelper {
 
     // MARK: All Periods for a Year
 
-    static func allPeriods(for year: Int) -> [PeriodInfo] {
-        switch AppPreferences.trackingPeriod {
+    static func allPeriods(for year: Int, period: TrackingPeriod? = nil) -> [PeriodInfo] {
+        switch period ?? AppPreferences.trackingPeriod {
         case .monthly: return allMonths(for: year)
         case .quarterly: return allQuarters(for: year)
         case .yearly: return [yearInfo(for: Calendar.current.date(from: DateComponents(year: year, month: 6, day: 15))!)]
