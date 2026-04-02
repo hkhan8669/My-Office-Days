@@ -685,6 +685,7 @@ struct SettingsView: View {
                                 selectedWorkDays.insert(weekday)
                             }
                             AppPreferences.setWorkDays(selectedWorkDays)
+                            viewModel.autoPopulatePlannedDays()
                             viewModel.invalidateMonthCache()
                             viewModel.refreshSnapshot()
                         } label: {
@@ -1084,7 +1085,7 @@ struct SettingsView: View {
                     configRow(
                         icon: "square.and.arrow.up.fill",
                         iconColor: Theme.holiday,
-                        title: "Export to CSV",
+                        title: "Export Spreadsheet",
                         subtitle: "Download spreadsheet for \(exportYear)"
                     )
                 }

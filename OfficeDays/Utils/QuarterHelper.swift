@@ -332,7 +332,8 @@ struct PeriodHelper {
 
     static func weeksRemaining(in period: PeriodInfo, from date: Date) -> Int {
         let days = weekdaysRemaining(in: period, from: date)
-        return (days + 4) / 5
+        let daysPerWeek = max(1, AppPreferences.workDays.count)
+        return (days + daysPerWeek - 1) / daysPerWeek
     }
 
     // MARK: Pace

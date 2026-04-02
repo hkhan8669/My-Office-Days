@@ -54,7 +54,7 @@ struct InsightsView: View {
                     csvContent = viewModel.exportCSV(year: year)
                     showShareSheet = true
                 } label: {
-                    Label("Export CSV", systemImage: "square.and.arrow.up")
+                    Label("Export Spreadsheet", systemImage: "square.and.arrow.up")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.accent)
                         .padding(.horizontal, 14)

@@ -265,7 +265,7 @@ struct DashboardView: View {
             // Ring legend
             HStack(spacing: 12) {
                 legendSquare(color: Theme.accent, label: "Office Days", count: creditedDays)
-                legendSquare(color: Theme.accent.opacity(0.3), label: "Vacation / Holidays", count: snap.futureCreditedDays)
+                legendSquare(color: Theme.accent.opacity(0.3), label: "Upcoming", count: snap.futureCreditedDays)
                 legendSquare(color: Theme.planned.opacity(0.35), label: "Planned", count: snap.plannedDays)
             }
             .padding(.top, 2)
@@ -547,9 +547,11 @@ struct DashboardView: View {
                 icon: "gauge.with.dots.needle.33percent",
                 title: daysRemaining > 0 ? "Required Pace" : "Target Complete",
                 subtitle: daysRemaining > 0
-                    ? String(format: "%.1f days per week needed across %d remaining weeks.", daysPerWeek, weeksRemaining)
+                    ? (weeksRemaining > 0
+                        ? String(format: "%.1f days per week needed across %d remaining week%@.", daysPerWeek, weeksRemaining, weeksRemaining == 1 ? "" : "s")
+                        : "\(daysRemaining) day\(daysRemaining == 1 ? "" : "s") short — this \(AppPreferences.trackingPeriod.shortLabel.lowercased()) has ended.")
                     : "You have met the \(target)-day target for \(period.label).",
-                color: daysRemaining > 0 ? Theme.accent : Theme.vacation
+                color: daysRemaining > 0 ? (weeksRemaining > 0 ? Theme.accent : Theme.behind) : Theme.vacation
             )
         }
     }
