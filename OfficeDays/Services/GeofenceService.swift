@@ -12,6 +12,9 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private let entryTimestampsKey = "tracking.entryTimestamps"
     private let lastCheckInOfficeKey = "tracking.lastCheckInOffice"
     private let lastCheckInDateKey = "tracking.lastCheckInDate"
+    /// Tracks last notification time per office to debounce flaky GPS at boundaries.
+    private var lastNotificationTime: [String: Date] = [:]
+    private let notificationDebounceInterval: TimeInterval = 600 // 10 minutes
 
     private var modelContext: ModelContext?
     private var officesProvider: (() -> [OfficeLocation])?
@@ -210,8 +213,14 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         // Log the office day immediately on entry – no dwell wait.
         logOfficeDayIfNeeded(officeName: circularRegion.identifier)
 
-        // Always notify on entry, even if the day was already logged.
-        sendArrivalNotification(officeName: circularRegion.identifier)
+        // Debounce notifications to avoid spam from flaky GPS at boundaries.
+        let office = circularRegion.identifier
+        if let lastTime = lastNotificationTime[office],
+           now().timeIntervalSince(lastTime) < notificationDebounceInterval {
+            return
+        }
+        lastNotificationTime[office] = now()
+        sendArrivalNotification(officeName: office)
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
@@ -334,6 +343,12 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
             // If already logged as office for THIS same office, nothing to do.
             if let existing, existing.dayType == .office, existing.officeName == officeName {
+                return
+            }
+
+            // Never override a holiday — driving past the office on MLK Day
+            // shouldn't destroy the holiday entry.
+            if let existing, existing.dayType == .holiday {
                 return
             }
 
