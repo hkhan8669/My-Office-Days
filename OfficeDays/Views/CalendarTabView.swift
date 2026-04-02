@@ -367,7 +367,7 @@ struct CalendarTabView: View {
             )
         }
         .buttonStyle(PressableButtonStyle())
-        .opacity(isWeekend ? 0.35 : 1)
+        .opacity(isWeekend && day == nil ? 0.35 : 1)
         .background(
             GeometryReader { geo in
                 Color.clear.preference(
