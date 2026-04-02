@@ -290,7 +290,9 @@ struct CalendarTabView: View {
                 let today = Calendar.current.startOfDay(for: Date())
                 guard date >= today else { return }
                 toggleSelection(for: dateKey)
-            } else if isFuture || isToday {
+            } else if isToday {
+                selectedDate = IdentifiableDate(date: date)
+            } else if isFuture {
                 viewModel.togglePlanned(date: date)
                 viewModel.refreshMonthCache(for: displayedMonth)
             } else {

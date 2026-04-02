@@ -580,17 +580,19 @@ final class AttendanceViewModel {
         let calendar = Calendar.current
         let startOfYear = calendar.date(from: DateComponents(year: year, month: 1, day: 1)) ?? Date()
         let today = calendar.startOfDay(for: Date())
+        let endOfYear = calendar.date(from: DateComponents(year: year, month: 12, day: 31)) ?? today
+        let exportEnd = min(today, endOfYear)
         let startKey = AttendanceDay.key(for: startOfYear)
-        let todayKey = AttendanceDay.key(for: today)
+        let endKey = AttendanceDay.key(for: exportEnd)
 
         let descriptor = FetchDescriptor<AttendanceDay>(
-            predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= todayKey }
+            predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= endKey }
         )
         let days = fetch(descriptor, userMessage: "Unable to prepare the export.")
         let dayMap = Dictionary(uniqueKeysWithValues: days.map { ($0.dateKey, $0) })
 
         let geoDescriptor = FetchDescriptor<GeoLog>(
-            predicate: #Predicate { $0.eventTypeRaw == "autoLogged" },
+            predicate: #Predicate { $0.eventTypeRaw == "entry" },
             sortBy: [SortDescriptor(\.timestamp)]
         )
         let geoLogs = (try? modelContext.fetch(geoDescriptor)) ?? []
@@ -665,10 +667,10 @@ final class AttendanceViewModel {
         xml += "</Row>\n"
 
         var current = startOfYear
-        while current <= today {
+        while current <= exportEnd {
             let key = AttendanceDay.key(for: current)
             if AppPreferences.isWorkDay(current), let day = dayMap[key] {
-                if day.dayType != .planned && day.dayType != .remote {
+                if day.dayType != .remote {
                     let location: String
                     switch day.dayType {
                     case .office: location = esc(day.officeName ?? "Office")
@@ -716,13 +718,14 @@ final class AttendanceViewModel {
         xml += "</Row>\n"
 
         let monthNames = DateFormatter().monthSymbols ?? []
-        let currentMonth = calendar.component(.month, from: today)
+        let currentYear = calendar.component(.year, from: today)
+        let lastMonth = year < currentYear ? 12 : calendar.component(.month, from: today)
         var yO = 0, yT = 0, yV = 0, yH = 0, yC = 0, yCr = 0
 
-        for month in 1...currentMonth {
+        for month in 1...lastMonth {
             guard let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
                   let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart) else { continue }
-            let cappedEnd = min(calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? monthStart, today)
+            let cappedEnd = min(calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? monthStart, exportEnd)
             var o = 0, t = 0, v = 0, h = 0, c = 0
             var d = monthStart
             while d <= cappedEnd {

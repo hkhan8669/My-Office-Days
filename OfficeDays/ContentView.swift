@@ -293,11 +293,13 @@ private struct OnboardingFlowView: View {
                     .background(Theme.surfaceContainerLow)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .onChange(of: officeSearchQuery) { _, newValue in
-                    guard newValue.count >= 3 else {
+                .task(id: officeSearchQuery) {
+                    guard officeSearchQuery.count >= 3 else {
                         officeSearchResults = []
                         return
                     }
+                    try? await Task.sleep(nanoseconds: 400_000_000) // 400ms debounce
+                    guard !Task.isCancelled else { return }
                     performOfficeSearch()
                 }
 

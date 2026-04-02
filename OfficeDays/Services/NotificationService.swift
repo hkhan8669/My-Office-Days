@@ -109,7 +109,7 @@ final class NotificationService {
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(
-            identifier: "checkin-\(UUID().uuidString)",
+            identifier: "checkin-latest",
             content: content,
             trigger: trigger
         )

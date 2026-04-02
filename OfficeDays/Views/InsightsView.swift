@@ -257,7 +257,7 @@ struct InsightsView: View {
 
     private var mostFrequentLocation: String {
         let names = geoLogs
-            .filter { $0.eventType == .autoLogged }
+            .filter { $0.eventType == .entry }
             .map(\.locationName)
         guard !names.isEmpty else { return "---" }
         let counts = Dictionary(grouping: names, by: { $0 }).mapValues(\.count)
@@ -277,7 +277,7 @@ struct InsightsView: View {
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
 
-                Text(cachedStreak > 0 ? "consecutive office days" : "Start your streak!")
+                Text(cachedStreak > 0 ? "consecutive credited days" : "Start your streak!")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.75))
             }
@@ -303,7 +303,7 @@ struct InsightsView: View {
                 )
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Current streak, \(cachedStreak) consecutive office days")
+        .accessibilityLabel("Current streak, \(cachedStreak) consecutive credited days")
     }
 
     private var frequentLocationCard: some View {
@@ -357,18 +357,17 @@ struct InsightsView: View {
     }
 
     private var totalEventsCard: some View {
-        let entryCount = geoLogs.filter { $0.eventType == .entry }.count
-        let exitCount = geoLogs.filter { $0.eventType == .exit }.count
+        let todayLogs = geoLogs.filter {
+            Calendar.current.isDateInToday($0.timestamp)
+        }
+        let entryCount = todayLogs.filter { $0.eventType == .entry }.count
+        let exitCount = todayLogs.filter { $0.eventType == .exit }.count
 
         return VStack(alignment: .leading, spacing: 8) {
             Text("EVENTS TODAY")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Theme.textTertiary)
                 .tracking(1.3)
-
-            let todayLogs = geoLogs.filter {
-                Calendar.current.isDateInToday($0.timestamp)
-            }
 
             Text("\(todayLogs.count)")
                 .font(.title3.weight(.bold))

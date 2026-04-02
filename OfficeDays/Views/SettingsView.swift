@@ -1594,11 +1594,13 @@ private struct EditOfficeSheet: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
                 )
             }
-            .onChange(of: searchQuery) { _, newValue in
-                guard newValue.count >= 3 else {
+            .task(id: searchQuery) {
+                guard searchQuery.count >= 3 else {
                     searchResults = []
                     return
                 }
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                guard !Task.isCancelled else { return }
                 performSearch()
             }
         }
@@ -1818,11 +1820,13 @@ struct AddOfficeSheet: View {
                         .fontWeight(.semibold)
                 }
             }
-            .onChange(of: searchQuery) { _, newValue in
-                guard newValue.count >= 3 else {
+            .task(id: searchQuery) {
+                guard searchQuery.count >= 3 else {
                     searchResults = []
                     return
                 }
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                guard !Task.isCancelled else { return }
                 performSearch()
             }
         }
