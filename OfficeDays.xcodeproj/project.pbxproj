@@ -168,7 +168,7 @@
 			dependencies = (
 			);
 			name = OfficeDays;
-			productName = OfficeDays;
+			productName = "My Office Days";
 			productReference = A97C29AD63741CF438998CE6 /* OfficeDays.app */;
 			productType = "com.apple.product-type.application";
 		};

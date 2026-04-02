@@ -87,11 +87,24 @@ struct PeriodSummaryView: View {
 
     // MARK: - Period Card
 
+    private var periodTarget: Int {
+        guard let override = periodOverride else { return PeriodHelper.targetDaysPerPeriod }
+        return AppPreferences.defaultTargetForPeriod(override)
+    }
+
+    private var periodsInYear: Int {
+        switch trackingPeriod {
+        case .monthly: return 12
+        case .quarterly: return 4
+        case .yearly: return 1
+        }
+    }
+
     private func periodCard(_ period: PeriodInfo) -> some View {
         let stats = viewModel.periodStats(in: period)
         let count = stats.targetDays
-        let target = PeriodHelper.targetDaysPerPeriod
-        let delta = stats.delta
+        let target = periodTarget
+        let delta = count - target
         let progress = min(1.0, Double(count) / Double(max(1, target)))
         let isCurrent = isCurrentPeriod(period)
 
@@ -230,7 +243,7 @@ struct PeriodSummaryView: View {
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(Theme.accent)
                         .contentTransition(.numericText())
-                    Text("of \(PeriodHelper.targetDaysPerPeriod * PeriodHelper.periodsPerYear) target days")
+                    Text("of \(periodTarget * periodsInYear) target days")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.textTertiary)
                 }
@@ -238,7 +251,7 @@ struct PeriodSummaryView: View {
                 Spacer()
 
                 // Year progress ring
-                let yearTarget = Double(PeriodHelper.targetDaysPerPeriod * PeriodHelper.periodsPerYear)
+                let yearTarget = Double(periodTarget * periodsInYear)
                 let yearProgress = min(1.0, Double(yearTotal) / max(1, yearTarget))
 
                 ZStack {
@@ -265,8 +278,8 @@ struct PeriodSummaryView: View {
     // MARK: - Helpers
 
     private func isCurrentPeriod(_ period: PeriodInfo) -> Bool {
-        let current = PeriodHelper.currentPeriod()
-        return period.label == current.label
+        let now = Date()
+        return now >= period.startDate && now <= period.endDate
     }
 
     private func deltaLabel(_ delta: Int) -> String {

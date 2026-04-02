@@ -383,7 +383,8 @@ struct CalendarTabView: View {
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.5)
                 .onEnded { _ in
-                    guard DateHelper.isWeekday(date) else { return }
+                    let today = Calendar.current.startOfDay(for: Date())
+                    guard DateHelper.isWeekday(date), date >= today else { return }
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isMultiSelectMode = true
                         multiSelectedDates.insert(dateKey)

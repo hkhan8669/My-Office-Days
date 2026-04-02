@@ -176,7 +176,10 @@ private struct OnboardingFlowView: View {
                     permissionsStep.tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .disabled(false) // Pages are controlled programmatically via step buttons
+                .allowsHitTesting(true)
                 .animation(.easeInOut(duration: 0.3), value: step)
+                .gesture(DragGesture()) // Consume swipe to prevent skipping steps
             }
         }
     }
