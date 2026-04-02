@@ -215,22 +215,26 @@ struct InsightsView: View {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let allDays = loadAllDays()
-        let officeDays = allDays
-            .filter { $0.dayType.countsTowardTarget }
-            .map { calendar.startOfDay(for: $0.date) }
-            .sorted(by: >)
+        let officeDays = Set(
+            allDays
+                .filter { $0.dayType.countsTowardTarget }
+                .map { AttendanceDay.key(for: $0.date) }
+        )
 
         var streak = 0
         var checkDate = today
+        // Safety: never look back more than 1 year
+        let maxLookback = calendar.date(byAdding: .year, value: -1, to: today) ?? today
 
-        while true {
+        while checkDate >= maxLookback {
+            guard let prevDate = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
             if !AppPreferences.isWorkDay(checkDate) {
-                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+                checkDate = prevDate
                 continue
             }
-            if officeDays.contains(checkDate) {
+            if officeDays.contains(AttendanceDay.key(for: checkDate)) {
                 streak += 1
-                checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+                checkDate = prevDate
             } else {
                 break
             }
