@@ -1162,14 +1162,22 @@ struct SettingsView: View {
     }
 
     private func sendFeedbackEmail() {
-        let email = "feedback@myofficedays.app"
-        let subject = "My Office Days Feedback (v1.0.0)"
-        let body = "\n\n---\nApp Version: 1.0.0\niOS \(UIDevice.current.systemVersion)\n\(UIDevice.current.model)"
+        let email = "kviction@gmail.com"
+        let ticketNumber = nextTicketNumber()
+        let subject = "My Office Days Feedback [\(ticketNumber)]"
+        let body = "\n\n---\nTicket: \(ticketNumber)\nApp Version: 1.0.0\niOS \(UIDevice.current.systemVersion)\n\(UIDevice.current.model)"
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         if let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)") {
             UIApplication.shared.open(url)
         }
+    }
+
+    private func nextTicketNumber() -> String {
+        let key = "feedback.ticketCounter"
+        let counter = UserDefaults.standard.integer(forKey: key) + 1
+        UserDefaults.standard.set(counter, forKey: key)
+        return String(format: "MOD-%04d", counter)
     }
 
     // MARK: - Reusable Row Components
