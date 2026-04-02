@@ -13,6 +13,17 @@ struct DayDetailView: View {
         viewModel.attendanceDay(for: date)
     }
 
+    private var isPastDay: Bool {
+        Calendar.current.startOfDay(for: date) < Calendar.current.startOfDay(for: Date())
+    }
+
+    private var availableTypes: [DayType] {
+        if isPastDay {
+            return DayType.manualOptions.filter { $0 != .planned }
+        }
+        return DayType.manualOptions
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -53,7 +64,7 @@ struct DayDetailView: View {
                         columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
                         spacing: 10
                     ) {
-                        ForEach(DayType.manualOptions) { type in
+                        ForEach(availableTypes) { type in
                             dayTypeButton(type)
                         }
                     }

@@ -443,6 +443,8 @@ private struct OnboardingFlowView: View {
                 Spacer(minLength: 40)
 
                 onboardingButton("Continue") { step = 2 }
+                    .disabled(viewModel.offices().isEmpty)
+                    .opacity(viewModel.offices().isEmpty ? 0.5 : 1.0)
             }
             .padding(24)
         }
