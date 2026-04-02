@@ -158,7 +158,7 @@ struct SplashView: View {
     }
 
     private var subtitleView: some View {
-        Text("WORKSPACE MANAGEMENT")
+        Text("OFFICE ATTENDANCE TRACKER")
             .font(.system(size: 11, weight: .semibold, design: .default))
             .tracking(3)
             .foregroundStyle(Theme.outline)
@@ -182,23 +182,30 @@ struct SplashView: View {
     }
 
     private var securityBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.accent.opacity(0.7))
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Theme.accent)
 
-            Text("All data is securely saved on your device")
+                Text("Your data stays on this device")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.onSurface)
+            }
+
+            Text("Nothing is uploaded or shared — ever.")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Theme.onSurfaceVariant)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
         .background(
-            Capsule()
+            RoundedRectangle(cornerRadius: 14)
                 .fill(Theme.surfaceContainerLow)
                 .overlay(
-                    Capsule()
-                        .stroke(Theme.outlineVariant.opacity(0.5), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Theme.accent.opacity(0.15), lineWidth: 1)
                 )
         )
         .opacity(badgeOpacity)
@@ -258,8 +265,8 @@ struct SplashView: View {
     }
 
     private func scheduleDismissal() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-            withAnimation(.easeInOut(duration: 0.35)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
+            withAnimation(.easeInOut(duration: 0.4)) {
                 isActive = false
             }
         }

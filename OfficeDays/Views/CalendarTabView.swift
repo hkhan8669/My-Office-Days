@@ -42,10 +42,12 @@ struct CalendarTabView: View {
                                 .onChanged { value in
                                     guard isMultiSelectMode else { return }
                                     let location = value.location
+                                    let today = Calendar.current.startOfDay(for: Date())
                                     for (dateKey, frame) in cellFrames {
                                         if frame.contains(location) {
                                             if let date = Self.dateKeyFormatter.date(from: dateKey),
                                                DateHelper.isWeekday(date),
+                                               date >= today,
                                                !multiSelectedDates.contains(dateKey) {
                                                 multiSelectedDates.insert(dateKey)
                                             }
@@ -286,7 +288,7 @@ struct CalendarTabView: View {
 
             if isMultiSelectMode {
                 toggleSelection(for: dateKey)
-            } else if isFuture {
+            } else if isFuture || isToday {
                 viewModel.togglePlanned(date: date)
                 viewModel.refreshMonthCache(for: displayedMonth)
             } else {
@@ -535,7 +537,8 @@ struct CalendarTabView: View {
     }
 
     private func selectAllWeekdaysInMonth() {
-        for date in DateHelper.daysInMonth(for: displayedMonth) where DateHelper.isWeekday(date) {
+        let today = Calendar.current.startOfDay(for: Date())
+        for date in DateHelper.daysInMonth(for: displayedMonth) where DateHelper.isWeekday(date) && date >= today {
             multiSelectedDates.insert(AttendanceDay.key(for: date))
         }
     }

@@ -414,8 +414,9 @@ private struct ShareSheet: UIViewControllerRepresentable {
     let text: String
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
+        let year = Calendar.current.component(.year, from: Date())
         let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OfficeDays_Export.csv")
+            .appendingPathComponent("My Office Days \(year).xls")
         do {
             try text.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {

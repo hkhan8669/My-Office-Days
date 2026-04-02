@@ -488,9 +488,9 @@ final class AttendanceViewModel {
         }
     }
 
-    // MARK: - CSV Export
+    // MARK: - Spreadsheet Export
 
-    func exportCSV(year: Int) -> String {
+    func exportSpreadsheet(year: Int) -> String {
         let calendar = Calendar.current
         let startOfYear = calendar.date(from: DateComponents(year: year, month: 1, day: 1)) ?? Date()
         let endOfYear = calendar.date(from: DateComponents(year: year, month: 12, day: 31)) ?? startOfYear
@@ -502,50 +502,96 @@ final class AttendanceViewModel {
                 $0.dateKey >= startKey && $0.dateKey <= endKey
             }
         )
-        let days = fetch(descriptor, userMessage: "Unable to prepare the CSV export.")
+        let days = fetch(descriptor, userMessage: "Unable to prepare the export.")
         let dayMap = Dictionary(uniqueKeysWithValues: days.map { ($0.dateKey, $0) })
 
-        func csvField(_ value: String) -> String {
-            if value.contains(",") || value.contains("\"") || value.contains("\n") {
-                return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        let weekdayFormatter = DateFormatter()
+        weekdayFormatter.dateFormat = "EEEE"
+
+        func typeColor(_ type: DayType?) -> String {
+            guard let t = type else { return "#F3F4F6" }
+            switch t {
+            case .office: return "#DBEAFE"
+            case .planned: return "#FEF3C7"
+            case .vacation: return "#D1FAE5"
+            case .holiday: return "#EDE9FE"
+            case .freeDay: return "#E0F2FE"
+            case .travel: return "#FEE2E2"
+            case .remote: return "#F3F4F6"
             }
-            return value
         }
 
-        var lines = ["Week #,Date,Day,Type,Office"]
+        var html = """
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head><meta charset="utf-8">
+        <style>
+        body { font-family: -apple-system, Helvetica, Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
+        th { background: #1E3A5F; color: white; font-weight: 600; padding: 10px 14px; text-align: left; font-size: 13px; }
+        td { padding: 8px 14px; border-bottom: 1px solid #E5E7EB; font-size: 13px; }
+        tr:nth-child(even) td { background: #F9FAFB; }
+        .title { font-size: 22px; font-weight: 700; color: #1E3A5F; margin-bottom: 4px; }
+        .subtitle { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
+        .type-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 500; font-size: 12px; }
+        .section-title { font-size: 16px; font-weight: 600; color: #1E3A5F; margin: 24px 0 8px 0; }
+        .summary-table th { background: #374151; }
+        .ahead { color: #059669; font-weight: 600; }
+        .behind { color: #DC2626; font-weight: 600; }
+        .even { color: #6B7280; font-weight: 600; }
+        </style>
+        </head><body>
+        <div class="title">My Office Days — \(year)</div>
+        <div class="subtitle">Exported \(formatter.string(from: Date())) · \(AppPreferences.trackingPeriod.label) tracking · Target: \(PeriodHelper.targetDaysPerPeriod) days per \(AppPreferences.trackingPeriod.shortLabel.lowercased())</div>
+        <table>
+        <tr><th>Week</th><th>Date</th><th>Day</th><th>Type</th><th>Office / Notes</th></tr>
+        """
+
         var current = startOfYear
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-
-        let weekdayFormatter = DateFormatter()
-        weekdayFormatter.dateFormat = "EEE"
-
         while current <= endOfYear {
             if AppPreferences.isWorkDay(current) {
                 let day = dayMap[AttendanceDay.key(for: current)]
                 let typeString = day?.dayType.shortLabel ?? "Unlogged"
-                let office = day?.officeName ?? ""
+                let office = day?.officeName ?? day?.holidayName ?? ""
                 let weekOfYear = calendar.component(.weekOfYear, from: current)
-                lines.append("\(weekOfYear),\(formatter.string(from: current)),\(weekdayFormatter.string(from: current)),\(csvField(typeString)),\(csvField(office))")
+                let bgColor = typeColor(day?.dayType)
+                html += "<tr><td>\(weekOfYear)</td><td>\(formatter.string(from: current))</td><td>\(weekdayFormatter.string(from: current))</td><td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(typeString)</span></td><td>\(office)</td></tr>\n"
             }
             guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
             current = nextDay
         }
 
-        lines.append("")
+        html += "</table>\n"
+
+        // Period summary
         let periodLabel = AppPreferences.trackingPeriod.shortLabel
-        lines.append("\(periodLabel),Credited Days,Target,Delta")
+        html += "<div class=\"section-title\">\(periodLabel) Summary</div>\n"
+        html += "<table class=\"summary-table\"><tr><th>\(periodLabel)</th><th>Credited Days</th><th>Target</th><th>Delta</th></tr>\n"
+
+        var yearTotal = 0
         for period in PeriodHelper.allPeriods(for: year) {
             let count = officeDayCount(in: period)
+            yearTotal += count
             let target = PeriodHelper.targetDaysPerPeriod
             let delta = count - target
             let sign = delta >= 0 ? "+" : ""
-            lines.append("\(period.label),\(count),\(target),\(sign)\(delta)")
+            let cls = delta > 0 ? "ahead" : (delta < 0 ? "behind" : "even")
+            html += "<tr><td><b>\(period.label)</b></td><td>\(count)</td><td>\(target)</td><td class=\"\(cls)\">\(sign)\(delta)</td></tr>\n"
         }
 
-        return lines.joined(separator: "\n")
+        let yearTarget = PeriodHelper.targetDaysPerPeriod * PeriodHelper.periodsPerYear
+        let yearDelta = yearTotal - yearTarget
+        let yearSign = yearDelta >= 0 ? "+" : ""
+        let yearCls = yearDelta > 0 ? "ahead" : (yearDelta < 0 ? "behind" : "even")
+        html += "<tr style=\"background:#F3F4F6;font-weight:600\"><td><b>Year Total</b></td><td>\(yearTotal)</td><td>\(yearTarget)</td><td class=\"\(yearCls)\">\(yearSign)\(yearDelta)</td></tr>\n"
+        html += "</table>\n</body></html>"
+
+        return html
     }
+
+    /// Legacy CSV accessor
+    func exportCSV(year: Int) -> String { exportSpreadsheet(year: year) }
 
     // MARK: - Import
 

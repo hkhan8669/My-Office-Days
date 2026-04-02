@@ -2022,7 +2022,7 @@ struct CSVShareSheet: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OfficeDays_\(year).csv")
+            .appendingPathComponent("My Office Days \(year).xls")
         do {
             try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
         } catch {

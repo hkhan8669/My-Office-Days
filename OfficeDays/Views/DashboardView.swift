@@ -7,6 +7,7 @@ struct DashboardView: View {
     @State private var animateProgress = false
     @State private var appeared = false
     @State private var showDayDetail = false
+    @State private var showPaceDetail = false
 
     // MARK: - Computed Properties
 
@@ -106,6 +107,85 @@ struct DashboardView: View {
         }) {
             DayDetailView(viewModel: viewModel, date: Date())
         }
+        .sheet(isPresented: $showPaceDetail) {
+            paceRationaleSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Pace Rationale
+
+    private var paceRationaleSheet: some View {
+        VStack(spacing: 20) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: pace.icon)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(paceColor)
+                Text(pace.label)
+                    .font(.title2.bold())
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            .padding(.top, 24)
+
+            // Rationale
+            Text(paceRationale)
+                .font(.body)
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            // Stats breakdown
+            VStack(spacing: 12) {
+                paceStatRow(label: "Credited office days", value: "\(creditedDays)")
+                paceStatRow(label: "\(AppPreferences.trackingPeriod.label) target", value: "\(target)")
+                paceStatRow(label: "Days still needed", value: "\(daysRemaining)")
+                paceStatRow(label: "Work days remaining", value: "\(weekdaysRemaining)")
+                if daysRemaining > 0, weeksRemaining > 0 {
+                    paceStatRow(
+                        label: "Required pace",
+                        value: String(format: "%.1f days/week", Double(daysRemaining) / Double(weeksRemaining))
+                    )
+                }
+            }
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLow))
+            .padding(.horizontal, 24)
+
+            Spacer()
+        }
+    }
+
+    private var paceRationale: String {
+        let periodName = AppPreferences.trackingPeriod.shortLabel.lowercased()
+        switch pace {
+        case .complete:
+            return "You've met your \(target)-day target for this \(periodName). Great work!"
+        case .onTrack:
+            return "You need \(daysRemaining) more days across \(weeksRemaining) weeks — that's about \(String(format: "%.1f", Double(daysRemaining) / Double(max(1, weeksRemaining)))) days per week, which is a comfortable pace."
+        case .tight:
+            return "You need \(daysRemaining) more days across \(weeksRemaining) weeks — roughly \(String(format: "%.1f", Double(daysRemaining) / Double(max(1, weeksRemaining)))) days per week. Doable, but you'll want to stay consistent."
+        case .atRisk:
+            return "You need \(daysRemaining) more days with only \(weeksRemaining) weeks left — that's about \(String(format: "%.1f", Double(daysRemaining) / Double(max(1, weeksRemaining)))) days per week. Consider planning extra office days soon."
+        case .offTrack:
+            if weeksRemaining == 0 {
+                return "This \(periodName) has ended with \(daysRemaining) days still remaining against your target of \(target)."
+            }
+            return "You need \(daysRemaining) more days but only have \(weeksRemaining) weeks left — that requires more than 5 days per week, which is very difficult to achieve."
+        }
+    }
+
+    private func paceStatRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+        }
     }
 
     // MARK: - Progress Ring
@@ -184,29 +264,34 @@ struct DashboardView: View {
 
             // Ring legend
             HStack(spacing: 12) {
-                legendSquare(color: Theme.accent, label: "Credited")
-                legendSquare(color: Theme.accent.opacity(0.3), label: "Upcoming")
-                legendSquare(color: Theme.planned.opacity(0.35), label: "Planned")
+                legendSquare(color: Theme.accent, label: "Office Days", count: creditedDays)
+                legendSquare(color: Theme.accent.opacity(0.3), label: "Vacation / Holidays", count: snap.futureCreditedDays)
+                legendSquare(color: Theme.planned.opacity(0.35), label: "Planned", count: snap.plannedDays)
             }
             .padding(.top, 2)
 
-            // Pace badge – capsule with velocity stats
+            // Pace badge – tappable capsule with velocity stats
             VStack(spacing: 10) {
-                HStack(spacing: 6) {
-                    Image(systemName: pace.icon)
-                        .font(.system(size: 14, weight: .bold))
-                    Text(pace.label.uppercased())
-                        .font(.system(size: 11, weight: .heavy))
-                        .tracking(0.8)
+                Button {
+                    showPaceDetail = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: pace.icon)
+                            .font(.system(size: 14, weight: .bold))
+                        Text(pace.label.uppercased())
+                            .font(.system(size: 11, weight: .heavy))
+                            .tracking(0.8)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(paceColor)
+                            .shadow(color: paceColor.opacity(0.4), radius: 6, y: 3)
+                    )
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule()
-                        .fill(paceColor)
-                        .shadow(color: paceColor.opacity(0.4), radius: 6, y: 3)
-                )
+                .buttonStyle(PressableButtonStyle())
 
                 // Velocity details
                 HStack(spacing: 20) {
@@ -319,12 +404,12 @@ struct DashboardView: View {
 
     // MARK: - Legend & Velocity Helpers
 
-    private func legendSquare(color: Color, label: String) -> some View {
-        HStack(spacing: 5) {
+    private func legendSquare(color: Color, label: String, count: Int) -> some View {
+        HStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(color)
                 .frame(width: 8, height: 8)
-            Text(label)
+            Text("\(label) (\(count))")
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Theme.textSecondary)
         }
