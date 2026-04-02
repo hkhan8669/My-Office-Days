@@ -595,6 +595,12 @@ final class AttendanceViewModel {
             return "Manual"
         }
 
+        let officeColor = "#DBEAFE"
+        let travelColor = "#FEE2E2"
+        let vacationColor = "#D1FAE5"
+        let holidayColor = "#EDE9FE"
+        let creditColor = "#E0F2FE"
+
         var html = """
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
         <head><meta charset="utf-8">
@@ -612,14 +618,16 @@ final class AttendanceViewModel {
         .ahead { color: #059669; font-weight: 600; }
         .behind { color: #DC2626; font-weight: 600; }
         .even { color: #6B7280; font-weight: 600; }
-        .auto { color: #2563EB; font-size: 11px; }
-        .manual { color: #6B7280; font-size: 11px; }
+        .logged-auto { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #DBEAFE; color: #1D4ED8; font-weight: 600; font-size: 11px; }
+        .logged-manual { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #F3F4F6; color: #6B7280; font-weight: 600; font-size: 11px; }
+        .time { color: #6B7280; font-size: 12px; }
+        .count-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 12px; text-align: center; min-width: 24px; }
         </style>
         </head><body>
         <div class="title">My Office Days — \(year)</div>
         <div class="subtitle">Exported \(dateFormatter.string(from: Date())) · Jan 1 through \(dateFormatter.string(from: today)) · Target: \(PeriodHelper.targetDaysPerPeriod) days per \(AppPreferences.trackingPeriod.shortLabel.lowercased())</div>
         <table>
-        <tr><th>Date</th><th>Day</th><th>Status</th><th>Location</th><th>Check-in</th><th>Logged By</th></tr>
+        <tr><th>Date</th><th>Day</th><th>Status</th><th>Location</th><th>Logged By</th></tr>
         """
 
         // Day-by-day log from Jan 1 to today
@@ -645,17 +653,18 @@ final class AttendanceViewModel {
                         location = "—"
                     }
 
-                    let checkIn = checkInTimes[key].map { timeFormatter.string(from: $0) } ?? "—"
-                    let loggedByClass = day.isAutoLogged ? "auto" : "manual"
+                    // Date + check-in time combined
+                    let checkIn = checkInTimes[key].map { " · <span class=\"time\">\(timeFormatter.string(from: $0))</span>" } ?? ""
                     let bgColor = typeColor(day.dayType)
+                    let loggedByLabel = day.isAutoLogged ? "Auto (Geo)" : "Manual"
+                    let loggedByClass = day.isAutoLogged ? "logged-auto" : "logged-manual"
 
                     html += "<tr>"
-                    html += "<td>\(dateFormatter.string(from: current))</td>"
+                    html += "<td>\(dateFormatter.string(from: current))\(checkIn)</td>"
                     html += "<td>\(weekdayFormatter.string(from: current))</td>"
                     html += "<td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(day.dayType.label)</span></td>"
                     html += "<td>\(location)</td>"
-                    html += "<td>\(checkIn)</td>"
-                    html += "<td><span class=\"\(loggedByClass)\">\(loggedBy(day))</span></td>"
+                    html += "<td><span class=\"\(loggedByClass)\">\(loggedByLabel)</span></td>"
                     html += "</tr>\n"
                 }
             }
@@ -665,9 +674,16 @@ final class AttendanceViewModel {
 
         html += "</table>\n"
 
-        // Monthly summary
+        // Monthly summary with color-coded badges matching the day log
         html += "<div class=\"section-title\">Monthly Summary</div>\n"
-        html += "<table class=\"summary-table\"><tr><th>Month</th><th>Office</th><th>Travel</th><th>Vacation</th><th>Holidays</th><th>Credit</th><th>Total Credited</th><th>Target</th><th>Delta</th></tr>\n"
+        html += "<table class=\"summary-table\">"
+        html += "<tr><th>Month</th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(officeColor)\">Office</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(travelColor)\">Travel</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(vacationColor)\">Vacation</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(holidayColor)\">Holidays</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(creditColor)\">Credit</span></th>"
+        html += "<th>Total Credited</th></tr>\n"
 
         let monthNames = DateFormatter().monthSymbols ?? []
         let currentMonth = calendar.component(.month, from: today)
@@ -706,18 +722,29 @@ final class AttendanceViewModel {
             yearOffice += office; yearTravel += travel; yearVacation += vacation
             yearHoliday += holiday; yearCredit += credit; yearCredited += credited
 
-            let monthTarget = PeriodHelper.targetDaysPerPeriod
-            // Only show delta for months within a completed period context
             let monthName = month <= monthNames.count ? monthNames[month - 1] : "Month \(month)"
-            html += "<tr><td><b>\(monthName)</b></td><td>\(office)</td><td>\(travel)</td><td>\(vacation)</td><td>\(holiday)</td><td>\(credit)</td><td><b>\(credited)</b></td><td>—</td><td>—</td></tr>\n"
+            html += "<tr><td><b>\(monthName)</b></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(officeColor)\">\(office)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(travelColor)\">\(travel)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(vacationColor)\">\(vacation)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(holidayColor)\">\(holiday)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(creditColor)\">\(credit)</span></td>"
+            html += "<td><b>\(credited)</b></td></tr>\n"
         }
 
-        // Period totals row
-        let periodTarget = PeriodHelper.targetDaysPerPeriod
-        let periods = PeriodHelper.allPeriods(for: year)
+        // Year totals row
+        html += "<tr style=\"background:#F3F4F6;font-weight:600\"><td><b>Year Total</b></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(officeColor)\">\(yearOffice)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(travelColor)\">\(yearTravel)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(vacationColor)\">\(yearVacation)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(holidayColor)\">\(yearHoliday)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(creditColor)\">\(yearCredit)</span></td>"
+        html += "<td><b>\(yearCredited)</b></td></tr>\n"
         html += "</table>\n"
 
         // Period summary
+        let periodTarget = PeriodHelper.targetDaysPerPeriod
+        let periods = PeriodHelper.allPeriods(for: year)
         let periodLabel = AppPreferences.trackingPeriod.shortLabel
         html += "<div class=\"section-title\">\(periodLabel) Summary</div>\n"
         html += "<table class=\"summary-table\"><tr><th>\(periodLabel)</th><th>Credited Days</th><th>Target</th><th>Delta</th></tr>\n"
