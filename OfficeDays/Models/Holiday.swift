@@ -18,15 +18,13 @@ final class Holiday {
 
     static func federalHolidays(for year: Int, calendar: Calendar = .current) -> [(date: Date, name: String)] {
         let thanksgiving = nthWeekday(4, weekday: 5, month: 11, year: year, calendar: calendar)
-        let easterSunday = easterSunday(year: year, calendar: calendar)
-        let goodFriday = calendar.date(byAdding: .day, value: -2, to: easterSunday) ?? easterSunday
         let dayAfterThanksgiving = calendar.date(byAdding: .day, value: 1, to: thanksgiving) ?? thanksgiving
 
         return [
             (observedDate(for: date(year: year, month: 1, day: 1, calendar: calendar), calendar: calendar), "New Year's Day"),
             (nthWeekday(3, weekday: 2, month: 1, year: year, calendar: calendar), "MLK Day"),
             (nthWeekday(3, weekday: 2, month: 2, year: year, calendar: calendar), "Presidents' Day"),
-            (goodFriday, "Good Friday"),
+
             (lastWeekday(weekday: 2, month: 5, year: year, calendar: calendar), "Memorial Day"),
             (observedDate(for: date(year: year, month: 6, day: 19, calendar: calendar), calendar: calendar), "Juneteenth"),
             (observedDate(for: date(year: year, month: 7, day: 4, calendar: calendar), calendar: calendar), "Independence Day"),

@@ -384,11 +384,46 @@ final class AttendanceViewModel {
         saveAndRefresh(userMessage: "Unable to add the holiday.")
     }
 
+    /// Add a holiday on the same month/day for multiple subsequent years.
+    func addHolidayRepeating(date: Date, name: String, throughYear: Int) {
+        let calendar = Calendar.current
+        let baseYear = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date)
+        let day = calendar.component(.day, from: date)
+
+        for year in baseYear...throughYear {
+            if let yearDate = calendar.date(from: DateComponents(year: year, month: month, day: day)) {
+                let normalized = calendar.startOfDay(for: yearDate)
+                // Skip if a non-holiday entry already exists
+                if let existing = attendanceDay(for: normalized), existing.dayType != .holiday {
+                    continue
+                }
+                applyDayType(date: normalized, type: .holiday, notes: name)
+            }
+        }
+        saveAndRefresh(userMessage: "Unable to add recurring holidays.")
+    }
+
     func deleteHoliday(_ holiday: ManagedHoliday) {
         if let day = attendanceDay(for: holiday.date), day.dayType == .holiday {
             modelContext.delete(day)
         }
         saveAndRefresh(userMessage: "Unable to delete the holiday.")
+    }
+
+    /// Delete all holidays with the same name across all years.
+    func deleteHolidayAllYears(name: String) {
+        let holidayType = DayType.holiday.rawValue
+        let descriptor = FetchDescriptor<AttendanceDay>(
+            predicate: #Predicate {
+                $0.dayTypeRaw == holidayType
+            }
+        )
+        let allHolidays = fetch(descriptor, userMessage: "Unable to find holidays.")
+        for day in allHolidays where day.holidayName == name {
+            modelContext.delete(day)
+        }
+        saveAndRefresh(userMessage: "Unable to delete holidays.")
     }
 
     /// Auto-populate planned days for selected work days from today through end of year.

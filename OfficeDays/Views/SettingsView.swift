@@ -1865,6 +1865,7 @@ struct HolidayManagementView: View {
     @State private var holidayName = ""
     @State private var holidayDate = Date()
     @State private var holidayToDelete: AttendanceViewModel.ManagedHoliday?
+    @State private var repeatEveryYear = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -1967,9 +1968,15 @@ struct HolidayManagementView: View {
                     ),
                     titleVisibility: .visible
                 ) {
-                    Button("Remove Holiday", role: .destructive) {
+                    Button("Remove This Year Only", role: .destructive) {
                         if let holiday = holidayToDelete {
                             viewModel.deleteHoliday(holiday)
+                            holidayToDelete = nil
+                        }
+                    }
+                    Button("Remove for All Years", role: .destructive) {
+                        if let holiday = holidayToDelete {
+                            viewModel.deleteHolidayAllYears(name: holiday.name)
                             holidayToDelete = nil
                         }
                     }
@@ -1977,7 +1984,7 @@ struct HolidayManagementView: View {
                         holidayToDelete = nil
                     }
                 } message: {
-                    Text("This holiday will not appear in future periods.")
+                    Text("Remove this holiday for the current year, or for all years?")
                 }
 
                 // Add Holiday Button
@@ -2016,17 +2023,33 @@ struct HolidayManagementView: View {
                         TextField("Holiday Name", text: $holidayName)
                         DatePicker("Date", selection: $holidayDate, displayedComponents: .date)
                     }
+                    Section {
+                        Toggle("Repeat every year", isOn: $repeatEveryYear)
+                    } footer: {
+                        if repeatEveryYear {
+                            Text("This holiday will be added on the same date from \(String(Calendar.current.component(.year, from: holidayDate))) through 2030.")
+                        }
+                    }
                 }
                 .navigationTitle("Add Holiday")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { showAddHoliday = false }
+                        Button("Cancel") {
+                            showAddHoliday = false
+                            repeatEveryYear = false
+                        }
                     }
                     ToolbarItem(placement: .primaryAction) {
                         Button("Save") {
-                            viewModel.addHoliday(date: holidayDate, name: holidayName)
+                            let trimmedName = holidayName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if repeatEveryYear {
+                                viewModel.addHolidayRepeating(date: holidayDate, name: trimmedName, throughYear: 2030)
+                            } else {
+                                viewModel.addHoliday(date: holidayDate, name: trimmedName)
+                            }
                             showAddHoliday = false
+                            repeatEveryYear = false
                         }
                         .disabled(holidayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
