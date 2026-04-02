@@ -1864,6 +1864,7 @@ struct HolidayManagementView: View {
     @State private var showAddHoliday = false
     @State private var holidayName = ""
     @State private var holidayDate = Date()
+    @State private var holidayToDelete: AttendanceViewModel.ManagedHoliday?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -1931,13 +1932,13 @@ struct HolidayManagementView: View {
                             Spacer()
 
                             Button(role: .destructive) {
-                                viewModel.deleteHoliday(holiday)
+                                holidayToDelete = holiday
                             } label: {
                                 Image(systemName: "trash")
                                     .font(.caption)
-                                    .foregroundStyle(Theme.behind)
+                                    .foregroundStyle(Color.red.opacity(0.7))
                             }
-                            .buttonStyle(PressableButtonStyle())
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
@@ -1958,6 +1959,26 @@ struct HolidayManagementView: View {
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5)
                 )
+                .confirmationDialog(
+                    "Remove \(holidayToDelete?.name ?? "Holiday")?",
+                    isPresented: Binding(
+                        get: { holidayToDelete != nil },
+                        set: { if !$0 { holidayToDelete = nil } }
+                    ),
+                    titleVisibility: .visible
+                ) {
+                    Button("Remove Holiday", role: .destructive) {
+                        if let holiday = holidayToDelete {
+                            viewModel.deleteHoliday(holiday)
+                            holidayToDelete = nil
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {
+                        holidayToDelete = nil
+                    }
+                } message: {
+                    Text("This holiday will not appear in future periods.")
+                }
 
                 // Add Holiday Button
                 Button {

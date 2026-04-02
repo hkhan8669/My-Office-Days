@@ -98,8 +98,12 @@ final class AttendanceViewModel {
     }
 
     func ensureHolidays(for year: Int) {
+        let dismissed = AppPreferences.dismissedHolidayDateKeys
         var inserted = false
         for holiday in Holiday.federalHolidays(for: year) {
+            let dateKey = AttendanceDay.key(for: holiday.date)
+            if dismissed.contains(dateKey) { continue }
+
             if let existingDay = attendanceDay(for: holiday.date) {
                 if existingDay.dayType == .holiday || !existingDay.isManualOverride {
                     existingDay.dayType = .holiday
@@ -386,6 +390,8 @@ final class AttendanceViewModel {
 
     func deleteHoliday(_ holiday: ManagedHoliday) {
         if let day = attendanceDay(for: holiday.date), day.dayType == .holiday {
+            // Mark as dismissed so ensureHolidays won't re-create it
+            AppPreferences.addDismissedHoliday(day.dateKey)
             modelContext.delete(day)
         }
         saveAndRefresh(userMessage: "Unable to delete the holiday.")

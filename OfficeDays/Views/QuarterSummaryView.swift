@@ -2,12 +2,19 @@ import SwiftUI
 
 struct PeriodSummaryView: View {
     let viewModel: AttendanceViewModel
+    var periodOverride: TrackingPeriod? = nil
     @State private var selectedYear = Calendar.current.component(.year, from: Date())
 
-    private var trackingPeriod: TrackingPeriod { AppPreferences.trackingPeriod }
+    private var trackingPeriod: TrackingPeriod { periodOverride ?? AppPreferences.trackingPeriod }
 
     private var periods: [PeriodInfo] {
-        PeriodHelper.allPeriods(for: selectedYear)
+        switch trackingPeriod {
+        case .monthly: return PeriodHelper.allMonths(for: selectedYear)
+        case .quarterly: return PeriodHelper.allQuarters(for: selectedYear)
+        case .yearly:
+            let date = Calendar.current.date(from: DateComponents(year: selectedYear, month: 6, day: 15))!
+            return [PeriodHelper.yearInfo(for: date)]
+        }
     }
 
     private var yearTotal: Int {

@@ -1,3 +1,4 @@
+import MapKit
 import SwiftData
 import SwiftUI
 
@@ -140,6 +141,17 @@ private struct OnboardingFlowView: View {
     @State private var holidayCounts = AppPreferences.dayTypesCountingTowardTarget.contains("holiday")
     @State private var creditCounts = AppPreferences.dayTypesCountingTowardTarget.contains("freeDay")
 
+    // Office search state
+    @State private var officeName = ""
+    @State private var officeSearchQuery = ""
+    @State private var officeSearchResults: [MKMapItem] = []
+    @State private var selectedOfficeMapItem: MKMapItem?
+    @State private var isSearchingOffice = false
+    @State private var officeMapRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    )
+
     var body: some View {
         ZStack {
             Theme.surface.ignoresSafeArea()
@@ -229,38 +241,202 @@ private struct OnboardingFlowView: View {
                 stepHeader(
                     icon: "building.2.fill",
                     color: Theme.accent,
-                    title: "Your Offices",
-                    subtitle: "Select which offices you'd like to track. You can add or change these anytime in Setup."
+                    title: "Add Your Office",
+                    subtitle: "Search for your office address to enable automatic check-ins."
                 )
 
-                VStack(spacing: 2) {
-                    ForEach(viewModel.offices(), id: \.name) { office in
-                        HStack(spacing: 14) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(office.name)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Theme.onSurface)
-                                Text(office.address)
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.onSurfaceVariant)
-                                    .lineLimit(1)
-                            }
-                            Spacer()
-                            Toggle("", isOn: Binding(
-                                get: { office.isEnabled },
-                                set: { _ in viewModel.toggleOfficeEnabled(office: office) }
-                            ))
-                            .tint(Theme.accent)
-                            .labelsHidden()
-                        }
+                // Office name
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("OFFICE NAME")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1.5)
+                    TextField("e.g. Main Office", text: $officeName)
+                        .font(.body)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
+                        .background(Theme.surfaceContainerLow)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                // Address search
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("SEARCH ADDRESS")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1.5)
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(Theme.textTertiary)
+                        TextField("Search for an address...", text: $officeSearchQuery)
+                            .font(.body)
+                            .onSubmit { performOfficeSearch() }
+                        if isSearchingOffice {
+                            ProgressView().scaleEffect(0.8)
+                        }
+                        if !officeSearchQuery.isEmpty {
+                            Button {
+                                officeSearchQuery = ""
+                                officeSearchResults = []
+                                selectedOfficeMapItem = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Theme.surfaceContainerLow)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .onChange(of: officeSearchQuery) { _, newValue in
+                    guard newValue.count >= 3 else {
+                        officeSearchResults = []
+                        return
+                    }
+                    performOfficeSearch()
+                }
+
+                // Search results
+                if !officeSearchResults.isEmpty && selectedOfficeMapItem == nil {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(officeSearchResults, id: \.self) { item in
+                                Button {
+                                    selectOfficeMapItem(item)
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "mappin.circle.fill")
+                                            .font(.title3)
+                                            .foregroundStyle(Theme.accent)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.name ?? "Unknown")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(Theme.textPrimary)
+                                            if let address = item.placemark.formattedAddress {
+                                                Text(address)
+                                                    .font(.caption)
+                                                    .foregroundStyle(Theme.textSecondary)
+                                                    .lineLimit(2)
+                                            }
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.textTertiary)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                }
+                                Divider().padding(.leading, 48)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 220)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
+                }
+
+                // Map preview + Add button
+                if let selected = selectedOfficeMapItem {
+                    VStack(spacing: 10) {
+                        ZStack(alignment: .bottomTrailing) {
+                            Map(coordinateRegion: .constant(officeMapRegion),
+                                annotationItems: [OnboardingMapPin(coordinate: selected.placemark.coordinate)]) { pin in
+                                MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                            }
+                            .frame(height: 160)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.3), lineWidth: 0.5))
+
+                            HStack(spacing: 4) {
+                                Image(systemName: "map.fill").font(.system(size: 9, weight: .semibold))
+                                Text("Apple Maps").font(.system(size: 9, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(.black.opacity(0.5)))
+                            .padding(10)
+                        }
+
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.vacation)
+                            Text(selected.placemark.formattedAddress ?? "Location selected")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1)
+                        }
+
+                        Button {
+                            addOnboardingOffice()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 14))
+                                Text("Add Office")
+                                    .font(.subheadline.weight(.bold))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accent))
+                        }
+                        .buttonStyle(PressableButtonStyle())
                     }
                 }
-                .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
 
-                Text("You can add custom offices later in the Setup tab.")
+                // Added offices list
+                let offices = viewModel.offices()
+                if !offices.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("YOUR OFFICES")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.textTertiary)
+                            .tracking(1.5)
+
+                        VStack(spacing: 0) {
+                            ForEach(offices, id: \.name) { office in
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Theme.accent.opacity(0.12))
+                                            .frame(width: 36, height: 36)
+                                        Image(systemName: "building.2.fill")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(Theme.accent)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(office.name)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(Theme.onSurface)
+                                        Text(office.address)
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.onSurfaceVariant)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                    Button {
+                                        viewModel.deleteOffice(office)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 18))
+                                            .foregroundStyle(Theme.textTertiary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                            }
+                        }
+                        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surfaceContainerLowest))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5))
+                    }
+                }
+
+                Text("You can add more offices anytime in Setup.")
                     .font(.caption)
                     .foregroundStyle(Theme.onSurfaceVariant)
 
@@ -542,6 +718,62 @@ private struct OnboardingFlowView: View {
         if creditCounts { types.insert("freeDay") }
         AppPreferences.setDayTypesCountingTowardTarget(types)
     }
+
+    // MARK: - Office Search Helpers
+
+    private func performOfficeSearch() {
+        isSearchingOffice = true
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = officeSearchQuery
+        request.resultTypes = .address
+
+        let search = MKLocalSearch(request: request)
+        search.start { response, _ in
+            DispatchQueue.main.async {
+                isSearchingOffice = false
+                if let response {
+                    officeSearchResults = Array(response.mapItems.prefix(8))
+                }
+            }
+        }
+    }
+
+    private func selectOfficeMapItem(_ item: MKMapItem) {
+        selectedOfficeMapItem = item
+        let coord = item.placemark.coordinate
+        officeMapRegion = MKCoordinateRegion(
+            center: coord,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+        if officeName.isEmpty {
+            officeName = item.name ?? ""
+        }
+    }
+
+    private func addOnboardingOffice() {
+        guard let item = selectedOfficeMapItem else { return }
+        let coord = item.placemark.coordinate
+        let address = item.placemark.formattedAddress ?? officeSearchQuery
+
+        viewModel.addOffice(
+            name: officeName,
+            address: address,
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            radiusInFeet: 820
+        )
+
+        // Reset search state for adding another
+        officeName = ""
+        officeSearchQuery = ""
+        officeSearchResults = []
+        selectedOfficeMapItem = nil
+    }
+}
+
+private struct OnboardingMapPin: Identifiable {
+    let id = UUID()
+    let coordinate: CLLocationCoordinate2D
 }
 
 // MARK: - Always Location Required

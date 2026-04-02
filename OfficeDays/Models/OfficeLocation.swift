@@ -45,7 +45,5 @@ final class OfficeLocation {
         return region
     }
 
-    static let defaultOffices: [(String, String, Double, Double)] = [
-        ("Newark, DE (HQ)", "300 Continental Drive, Newark, DE 19713", 39.6685, -75.7506),
-    ]
+    static let defaultOffices: [(String, String, Double, Double)] = []
 }

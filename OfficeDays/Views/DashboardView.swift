@@ -308,16 +308,30 @@ struct DashboardView: View {
             }
             .padding(.top, 4)
 
-            NavigationLink {
-                PeriodSummaryView(viewModel: viewModel)
-            } label: {
-                HStack(spacing: 4) {
-                    Text("View \(AppPreferences.trackingPeriod == .yearly ? "Year" : "\(AppPreferences.trackingPeriod.shortLabel)s")")
-                        .font(.system(size: 13, weight: .semibold))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+            HStack(spacing: 16) {
+                NavigationLink {
+                    PeriodSummaryView(viewModel: viewModel, periodOverride: .quarterly)
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("View Quarters")
+                            .font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(Theme.accent)
                 }
-                .foregroundStyle(Theme.accent)
+
+                NavigationLink {
+                    PeriodSummaryView(viewModel: viewModel, periodOverride: .monthly)
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("View Monthly")
+                            .font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(Theme.accent)
+                }
             }
             .padding(.top, 2)
         }

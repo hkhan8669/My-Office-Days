@@ -173,6 +173,32 @@ enum AppPreferences {
         UserDefaults.standard.set(enabled, forKey: holidaysEnabledKey)
     }
 
+    // MARK: - Dismissed Holidays
+
+    private static let dismissedHolidaysKey = "dismissedHolidayDateKeys"
+
+    static var dismissedHolidayDateKeys: Set<String> {
+        if let stored = UserDefaults.standard.array(forKey: dismissedHolidaysKey) as? [String] {
+            return Set(stored)
+        }
+        return []
+    }
+
+    static func addDismissedHoliday(_ dateKey: String) {
+        var dismissed = dismissedHolidayDateKeys
+        dismissed.insert(dateKey)
+        UserDefaults.standard.set(Array(dismissed), forKey: dismissedHolidaysKey)
+    }
+
+    static func removeDismissedHoliday(_ dateKey: String) {
+        var dismissed = dismissedHolidayDateKeys
+        dismissed.remove(dateKey)
+        UserDefaults.standard.set(Array(dismissed), forKey: dismissedHolidaysKey)
+    }
+
+    static func clearDismissedHolidays() {
+        UserDefaults.standard.removeObject(forKey: dismissedHolidaysKey)
+    }
 }
 
 // MARK: - Period Info
