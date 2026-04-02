@@ -376,8 +376,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
             try context.save()
 
-            recordGeoLog(eventType: .autoLogged, locationName: officeName)
-
             lastCheckedInOffice = officeName
             lastCheckInDate = now()
             userDefaults.set(officeName, forKey: lastCheckInOfficeKey)
