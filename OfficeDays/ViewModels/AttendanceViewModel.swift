@@ -391,23 +391,23 @@ final class AttendanceViewModel {
         saveAndRefresh(userMessage: "Unable to delete the holiday.")
     }
 
-    /// Auto-populate planned days for selected work days from tomorrow through end of year.
-    /// Skips dates that already have an entry (holidays, vacation, office, etc.).
+    /// Auto-populate planned days for selected work days from today through end of year.
+    /// Skips dates that already have an entry (office, vacation, holiday, etc.).
     func autoPopulatePlannedDays() {
         let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date()))!
+        let today = calendar.startOfDay(for: Date())
         let currentYear = calendar.component(.year, from: Date())
         let endOfYear = calendar.date(from: DateComponents(year: currentYear, month: 12, day: 31))!
 
         let workDays = AppPreferences.workDays
 
-        // Remove existing auto-planned days (non-manual-override planned) from tomorrow onward
-        let tomorrowKey = AttendanceDay.key(for: tomorrow)
+        // Remove existing auto-planned days (non-manual-override planned) from today onward
+        let todayKey = AttendanceDay.key(for: today)
         let endKey = AttendanceDay.key(for: endOfYear)
         let plannedType = DayType.planned.rawValue
         let removeDescriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
-                $0.dayTypeRaw == plannedType && $0.dateKey >= tomorrowKey && $0.dateKey <= endKey && $0.isManualOverride == false
+                $0.dayTypeRaw == plannedType && $0.dateKey >= todayKey && $0.dateKey <= endKey && $0.isManualOverride == false
             }
         )
         let existingAutoPlanned = fetch(removeDescriptor, userMessage: "Unable to clear auto-planned days.")
@@ -415,8 +415,8 @@ final class AttendanceViewModel {
             modelContext.delete(day)
         }
 
-        // Now populate new planned days
-        var current = tomorrow
+        // Populate planned days from today onward, skipping any date that already has an entry
+        var current = today
         var inserted = false
         while current <= endOfYear {
             let weekday = calendar.component(.weekday, from: current)
