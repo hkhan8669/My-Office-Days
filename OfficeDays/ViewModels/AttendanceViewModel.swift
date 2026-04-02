@@ -391,19 +391,19 @@ final class AttendanceViewModel {
         saveAndRefresh(userMessage: "Unable to delete the holiday.")
     }
 
-    /// Auto-populate planned days for selected work days from today through end of year.
+    /// Auto-populate planned days for selected work days from today through end of current year + 2.
     /// Skips dates that already have an entry (office, vacation, holiday, etc.).
     func autoPopulatePlannedDays() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let currentYear = calendar.component(.year, from: Date())
-        let endOfYear = calendar.date(from: DateComponents(year: currentYear, month: 12, day: 31))!
+        let endDate = calendar.date(from: DateComponents(year: currentYear + 2, month: 12, day: 31))!
 
         let workDays = AppPreferences.workDays
 
         // Remove existing auto-planned days (non-manual-override planned) from today onward
         let todayKey = AttendanceDay.key(for: today)
-        let endKey = AttendanceDay.key(for: endOfYear)
+        let endKey = AttendanceDay.key(for: endDate)
         let plannedType = DayType.planned.rawValue
         let removeDescriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
@@ -418,7 +418,7 @@ final class AttendanceViewModel {
         // Populate planned days from today onward, skipping any date that already has an entry
         var current = today
         var inserted = false
-        while current <= endOfYear {
+        while current <= endDate {
             let weekday = calendar.component(.weekday, from: current)
             if workDays.contains(weekday) {
                 if attendanceDay(for: current) == nil {

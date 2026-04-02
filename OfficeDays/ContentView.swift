@@ -39,6 +39,7 @@ struct ContentView: View {
                         onComplete: {
                             hasCompletedTrackingOnboarding = true
                             showTrackingOnboarding = false
+                            viewModel.autoPopulatePlannedDays()
                         }
                     )
                 }
