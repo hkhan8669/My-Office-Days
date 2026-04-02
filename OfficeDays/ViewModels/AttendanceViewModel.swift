@@ -85,6 +85,7 @@ final class AttendanceViewModel {
     func seedIfNeeded() {
         seedOffices()
         migrateLegacyHolidays()
+        removeGoodFridayHolidays()
 
         if AppPreferences.holidaysEnabled {
             let currentYear = Calendar.current.component(.year, from: Date())
@@ -885,6 +886,28 @@ final class AttendanceViewModel {
 
         if changed {
             saveChanges("Unable to migrate older holiday records.")
+        }
+    }
+
+    /// One-time cleanup: remove Good Friday entries that were seeded by an earlier version.
+    private func removeGoodFridayHolidays() {
+        let holidayType = DayType.holiday.rawValue
+        let descriptor = FetchDescriptor<AttendanceDay>(
+            predicate: #Predicate {
+                $0.dayTypeRaw == holidayType
+            }
+        )
+        let holidays = fetch(descriptor, userMessage: "Unable to check for Good Friday entries.")
+        var changed = false
+        for day in holidays {
+            if day.holidayName == "Good Friday" && !day.isManualOverride {
+                modelContext.delete(day)
+                changed = true
+            }
+        }
+        if changed {
+            saveChanges("Unable to remove Good Friday entries.")
+            invalidateMonthCache()
         }
     }
 
