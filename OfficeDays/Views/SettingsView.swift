@@ -1163,7 +1163,7 @@ struct SettingsView: View {
 
     private func sendFeedbackEmail() {
         let email = "kviction@gmail.com"
-        let ticketNumber = nextTicketNumber()
+        let ticketNumber = generateTicketID()
         let subject = "My Office Days Feedback [\(ticketNumber)]"
         let body = "\n\n---\nTicket: \(ticketNumber)\nApp Version: 1.0.0\niOS \(UIDevice.current.systemVersion)\n\(UIDevice.current.model)"
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
@@ -1173,11 +1173,10 @@ struct SettingsView: View {
         }
     }
 
-    private func nextTicketNumber() -> String {
-        let key = "feedback.ticketCounter"
-        let counter = UserDefaults.standard.integer(forKey: key) + 1
-        UserDefaults.standard.set(counter, forKey: key)
-        return String(format: "MOD-%04d", counter)
+    private func generateTicketID() -> String {
+        let chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        let id = String((0..<6).map { _ in chars.randomElement()! })
+        return "MOD-\(id)"
     }
 
     // MARK: - Reusable Row Components
