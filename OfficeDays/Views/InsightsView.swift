@@ -29,7 +29,7 @@ struct InsightsView: View {
             .onAppear { cachedStreak = computeStreak() }
         }
         .sheet(isPresented: $showShareSheet) {
-            ShareSheet(text: csvContent)
+            SpreadsheetShareSheet(content: csvContent, year: Calendar.current.component(.year, from: Date()))
         }
     }
 
@@ -408,22 +408,3 @@ struct InsightsView: View {
     }
 }
 
-// MARK: - Share Sheet
-
-private struct ShareSheet: UIViewControllerRepresentable {
-    let text: String
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let year = Calendar.current.component(.year, from: Date())
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("My Office Days \(year).xls")
-        do {
-            try text.write(to: tempURL, atomically: true, encoding: .utf8)
-        } catch {
-            return UIActivityViewController(activityItems: [text], applicationActivities: nil)
-        }
-        return UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}

@@ -554,6 +554,14 @@ final class AttendanceViewModel {
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.dateFormat = "EEEE"
 
+        func escapeHTML(_ string: String) -> String {
+            string
+                .replacingOccurrences(of: "&", with: "&amp;")
+                .replacingOccurrences(of: "<", with: "&lt;")
+                .replacingOccurrences(of: ">", with: "&gt;")
+                .replacingOccurrences(of: "\"", with: "&quot;")
+        }
+
         func typeColor(_ type: DayType?) -> String {
             guard let t = type else { return "#F3F4F6" }
             switch t {
@@ -597,7 +605,7 @@ final class AttendanceViewModel {
             if AppPreferences.isWorkDay(current) {
                 let day = dayMap[AttendanceDay.key(for: current)]
                 let typeString = day?.dayType.shortLabel ?? "Unlogged"
-                let office = day?.officeName ?? day?.holidayName ?? ""
+                let office = escapeHTML(day?.officeName ?? day?.holidayName ?? "")
                 let weekOfYear = calendar.component(.weekOfYear, from: current)
                 let bgColor = typeColor(day?.dayType)
                 html += "<tr><td>\(weekOfYear)</td><td>\(formatter.string(from: current))</td><td>\(weekdayFormatter.string(from: current))</td><td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(typeString)</span></td><td>\(office)</td></tr>\n"

@@ -89,7 +89,7 @@ struct SettingsView: View {
                 }
             }
             .sheet(isPresented: $showExportShare) {
-                CSVShareSheet(csvContent: csvContent, year: exportYear)
+                SpreadsheetShareSheet(content: csvContent, year: exportYear)
             }
         }
         .sheet(isPresented: $showAddOffice) {
@@ -2015,21 +2015,24 @@ struct HolidayManagementView: View {
     }
 }
 
-// MARK: - CSV Share Sheet
+// MARK: - Spreadsheet Share Sheet
 
-struct CSVShareSheet: UIViewControllerRepresentable {
-    let csvContent: String
+struct SpreadsheetShareSheet: UIViewControllerRepresentable {
+    let content: String
     let year: Int
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("My Office Days \(year).xls")
+        // Remove stale file to avoid sharing cached data
+        try? FileManager.default.removeItem(at: tempURL)
         do {
-            try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
+            try content.write(to: tempURL, atomically: true, encoding: .utf8)
+            return UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
         } catch {
-            return UIActivityViewController(activityItems: [csvContent], applicationActivities: nil)
+            // Fallback: share as plain text if file write fails
+            return UIActivityViewController(activityItems: [content], applicationActivities: nil)
         }
-        return UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
