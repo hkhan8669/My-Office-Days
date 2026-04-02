@@ -582,233 +582,229 @@ final class AttendanceViewModel {
         let startKey = AttendanceDay.key(for: startOfYear)
         let todayKey = AttendanceDay.key(for: today)
 
-        // Fetch attendance days up to today only
         let descriptor = FetchDescriptor<AttendanceDay>(
-            predicate: #Predicate {
-                $0.dateKey >= startKey && $0.dateKey <= todayKey
-            }
+            predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= todayKey }
         )
         let days = fetch(descriptor, userMessage: "Unable to prepare the export.")
         let dayMap = Dictionary(uniqueKeysWithValues: days.map { ($0.dateKey, $0) })
 
-        // Fetch geo logs for check-in timestamps
         let geoDescriptor = FetchDescriptor<GeoLog>(
             predicate: #Predicate { $0.eventTypeRaw == "autoLogged" },
             sortBy: [SortDescriptor(\.timestamp)]
         )
         let geoLogs = (try? modelContext.fetch(geoDescriptor)) ?? []
-        // Map dateKey → earliest auto-logged time for that day
         var checkInTimes: [String: Date] = [:]
         for log in geoLogs {
             let key = AttendanceDay.key(for: log.timestamp)
             if checkInTimes[key] == nil { checkInTimes[key] = log.timestamp }
         }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MMM d, yyyy"
-        let weekdayFormatter = DateFormatter()
-        weekdayFormatter.dateFormat = "EEEE"
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "h:mm a"
+        let dateFmt = DateFormatter(); dateFmt.dateFormat = "MMM d, yyyy"
+        let dayFmt = DateFormatter(); dayFmt.dateFormat = "EEEE"
+        let timeFmt = DateFormatter(); timeFmt.dateFormat = "h:mm a"
 
-        func escapeHTML(_ string: String) -> String {
-            string
-                .replacingOccurrences(of: "&", with: "&amp;")
-                .replacingOccurrences(of: "<", with: "&lt;")
-                .replacingOccurrences(of: ">", with: "&gt;")
-                .replacingOccurrences(of: "\"", with: "&quot;")
+        func esc(_ s: String) -> String {
+            s.replacingOccurrences(of: "&", with: "&amp;")
+             .replacingOccurrences(of: "<", with: "&lt;")
+             .replacingOccurrences(of: ">", with: "&gt;")
+             .replacingOccurrences(of: "\"", with: "&quot;")
         }
 
-        func typeColor(_ type: DayType) -> String {
+        func styleID(_ type: DayType) -> String {
             switch type {
-            case .office: return "#DBEAFE"
-            case .planned: return "#FEF3C7"
-            case .vacation: return "#D1FAE5"
-            case .holiday: return "#EDE9FE"
-            case .freeDay: return "#E0F2FE"
-            case .travel: return "#FEE2E2"
-            case .remote: return "#F3F4F6"
+            case .office: return "office"
+            case .vacation: return "vacation"
+            case .holiday: return "holiday"
+            case .travel: return "travel"
+            case .freeDay: return "freeDay"
+            case .planned: return "planned"
+            case .remote: return "remote"
             }
         }
 
-        func loggedBy(_ day: AttendanceDay) -> String {
-            if day.isAutoLogged { return "Auto (Geo)" }
-            return "Manual"
-        }
-
-        let officeColor = "#DBEAFE"
-        let travelColor = "#FEE2E2"
-        let vacationColor = "#D1FAE5"
-        let holidayColor = "#EDE9FE"
-        let creditColor = "#E0F2FE"
-
-        var html = """
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-        <head><meta charset="utf-8">
-        <style>
-        body { font-family: -apple-system, Helvetica, Arial, sans-serif; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
-        th { background: #1E3A5F; color: white; font-weight: 600; padding: 10px 14px; text-align: left; font-size: 13px; }
-        td { padding: 8px 14px; border-bottom: 1px solid #E5E7EB; font-size: 13px; }
-        tr:nth-child(even) td { background: #F9FAFB; }
-        .title { font-size: 22px; font-weight: 700; color: #1E3A5F; margin-bottom: 4px; }
-        .subtitle { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
-        .type-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 500; font-size: 12px; }
-        .section-title { font-size: 16px; font-weight: 600; color: #1E3A5F; margin: 24px 0 8px 0; }
-        .summary-table th { background: #374151; }
-        .ahead { color: #059669; font-weight: 600; }
-        .behind { color: #DC2626; font-weight: 600; }
-        .even { color: #6B7280; font-weight: 600; }
-        .logged-auto { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #DBEAFE; color: #1D4ED8; font-weight: 600; font-size: 11px; }
-        .logged-manual { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #F3F4F6; color: #6B7280; font-weight: 600; font-size: 11px; }
-        .time { color: #6B7280; font-size: 12px; }
-        .count-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 12px; text-align: center; min-width: 24px; }
-        </style>
-        </head><body>
-        <div class="title">My Office Days — \(year)</div>
-        <div class="subtitle">Exported \(dateFormatter.string(from: Date())) · Jan 1 through \(dateFormatter.string(from: today)) · Target: \(PeriodHelper.targetDaysPerPeriod) days per \(AppPreferences.trackingPeriod.shortLabel.lowercased())</div>
-        <table>
-        <tr><th>Date</th><th>Day</th><th>Status</th><th>Location</th><th>Logged By</th></tr>
+        // ── XML Spreadsheet with tabs ──
+        var xml = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <?mso-application progid="Excel.Sheet"?>
+        <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+         xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+        <Styles>
+         <Style ss:ID="Default"><Font ss:Size="11"/></Style>
+         <Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/><Interior ss:Color="#1E3A5F" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="summaryHeader"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/><Interior ss:Color="#374151" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="bold"><Font ss:Bold="1" ss:Size="11"/></Style>
+         <Style ss:ID="time"><Font ss:Color="#6B7280" ss:Size="10"/></Style>
+         <Style ss:ID="autoGeo"><Font ss:Bold="1" ss:Color="#1D4ED8" ss:Size="10"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="manual"><Font ss:Bold="1" ss:Color="#6B7280" ss:Size="10"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="office"><Font ss:Bold="1" ss:Color="#1E40AF" ss:Size="10"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="travel"><Font ss:Bold="1" ss:Color="#991B1B" ss:Size="10"/><Interior ss:Color="#FEE2E2" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="vacation"><Font ss:Bold="1" ss:Color="#065F46" ss:Size="10"/><Interior ss:Color="#D1FAE5" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="holiday"><Font ss:Bold="1" ss:Color="#5B21B6" ss:Size="10"/><Interior ss:Color="#EDE9FE" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="freeDay"><Font ss:Bold="1" ss:Color="#0C4A6E" ss:Size="10"/><Interior ss:Color="#E0F2FE" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="planned"><Font ss:Bold="1" ss:Color="#92400E" ss:Size="10"/><Interior ss:Color="#FEF3C7" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="remote"><Font ss:Bold="1" ss:Color="#374151" ss:Size="10"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="totalRow"><Font ss:Bold="1" ss:Size="11"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/></Style>
+         <Style ss:ID="ahead"><Font ss:Bold="1" ss:Color="#059669" ss:Size="11"/></Style>
+         <Style ss:ID="behind"><Font ss:Bold="1" ss:Color="#DC2626" ss:Size="11"/></Style>
+         <Style ss:ID="even"><Font ss:Bold="1" ss:Color="#6B7280" ss:Size="11"/></Style>
+        </Styles>
         """
 
-        // Day-by-day log from Jan 1 to today
+        // ── Tab 1: Daily Log ──
+        xml += "<Worksheet ss:Name=\"Daily Log\"><Table>"
+        xml += "<Column ss:Width=\"100\"/><Column ss:Width=\"80\"/><Column ss:Width=\"70\"/>"
+        xml += "<Column ss:Width=\"80\"/><Column ss:Width=\"130\"/><Column ss:Width=\"80\"/>"
+        xml += "<Row>"
+        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Date</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Day</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Check-in</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Status</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Location</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Logged By</Data></Cell>"
+        xml += "</Row>\n"
+
         var current = startOfYear
         while current <= today {
             let key = AttendanceDay.key(for: current)
             if AppPreferences.isWorkDay(current), let day = dayMap[key] {
-                // Skip planned/remote — only show actual logged activity
                 if day.dayType != .planned && day.dayType != .remote {
                     let location: String
                     switch day.dayType {
-                    case .office:
-                        location = escapeHTML(day.officeName ?? "Office")
-                    case .holiday:
-                        location = escapeHTML(day.holidayName ?? "Holiday")
-                    case .vacation:
-                        location = "—"
-                    case .travel:
-                        location = escapeHTML(day.officeName ?? "Travel")
-                    case .freeDay:
-                        location = escapeHTML(day.officeName ?? "—")
-                    default:
-                        location = "—"
+                    case .office: location = esc(day.officeName ?? "Office")
+                    case .holiday: location = esc(day.holidayName ?? "Holiday")
+                    case .vacation: location = "—"
+                    case .travel: location = esc(day.officeName ?? "Travel")
+                    case .freeDay: location = esc(day.officeName ?? "—")
+                    default: location = "—"
                     }
 
-                    // Date + check-in time combined
-                    let checkIn = checkInTimes[key].map { " · <span class=\"time\">\(timeFormatter.string(from: $0))</span>" } ?? ""
-                    let bgColor = typeColor(day.dayType)
-                    let loggedByLabel = day.isAutoLogged ? "Auto (Geo)" : "Manual"
-                    let loggedByClass = day.isAutoLogged ? "logged-auto" : "logged-manual"
+                    let checkIn = checkInTimes[key].map { timeFmt.string(from: $0) } ?? ""
+                    let logStyle = day.isAutoLogged ? "autoGeo" : "manual"
+                    let logLabel = day.isAutoLogged ? "Auto (Geo)" : "Manual"
 
-                    html += "<tr>"
-                    html += "<td>\(dateFormatter.string(from: current))\(checkIn)</td>"
-                    html += "<td>\(weekdayFormatter.string(from: current))</td>"
-                    html += "<td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(escapeHTML(day.dayType.label))</span></td>"
-                    html += "<td>\(location)</td>"
-                    html += "<td><span class=\"\(loggedByClass)\">\(loggedByLabel)</span></td>"
-                    html += "</tr>\n"
+                    xml += "<Row>"
+                    xml += "<Cell><Data ss:Type=\"String\">\(esc(dateFmt.string(from: current)))</Data></Cell>"
+                    xml += "<Cell><Data ss:Type=\"String\">\(esc(dayFmt.string(from: current)))</Data></Cell>"
+                    xml += "<Cell ss:StyleID=\"time\"><Data ss:Type=\"String\">\(esc(checkIn))</Data></Cell>"
+                    xml += "<Cell ss:StyleID=\"\(styleID(day.dayType))\"><Data ss:Type=\"String\">\(esc(day.dayType.label))</Data></Cell>"
+                    xml += "<Cell><Data ss:Type=\"String\">\(location)</Data></Cell>"
+                    xml += "<Cell ss:StyleID=\"\(logStyle)\"><Data ss:Type=\"String\">\(logLabel)</Data></Cell>"
+                    xml += "</Row>\n"
                 }
             }
             guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
             current = nextDay
         }
 
-        html += "</table>\n"
+        xml += "</Table></Worksheet>\n"
 
-        // Monthly summary with color-coded badges matching the day log
-        html += "<div class=\"section-title\">Monthly Summary</div>\n"
-        html += "<table class=\"summary-table\">"
-        html += "<tr><th>Month</th>"
-        html += "<th><span class=\"count-badge\" style=\"background:\(officeColor)\">Office</span></th>"
-        html += "<th><span class=\"count-badge\" style=\"background:\(travelColor)\">Travel</span></th>"
-        html += "<th><span class=\"count-badge\" style=\"background:\(vacationColor)\">Vacation</span></th>"
-        html += "<th><span class=\"count-badge\" style=\"background:\(holidayColor)\">Holidays</span></th>"
-        html += "<th><span class=\"count-badge\" style=\"background:\(creditColor)\">Credit</span></th>"
-        html += "<th>Total Credited</th></tr>\n"
+        // ── Tab 2: Summary ──
+        xml += "<Worksheet ss:Name=\"Summary\"><Table>"
+        xml += "<Column ss:Width=\"110\"/><Column ss:Width=\"70\"/><Column ss:Width=\"70\"/>"
+        xml += "<Column ss:Width=\"70\"/><Column ss:Width=\"70\"/><Column ss:Width=\"70\"/><Column ss:Width=\"100\"/>"
+
+        // Monthly summary
+        xml += "<Row>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Month</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Office</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Travel</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Vacation</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Holidays</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Credit</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Total Credited</Data></Cell>"
+        xml += "</Row>\n"
 
         let monthNames = DateFormatter().monthSymbols ?? []
         let currentMonth = calendar.component(.month, from: today)
-        var yearOffice = 0, yearTravel = 0, yearVacation = 0, yearHoliday = 0, yearCredit = 0, yearCredited = 0
+        var yO = 0, yT = 0, yV = 0, yH = 0, yC = 0, yCr = 0
 
         for month in 1...currentMonth {
             guard let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
                   let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart) else { continue }
-            let monthEnd = calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? monthStart
-            let cappedEnd = min(monthEnd, today)
-
-            var office = 0, travel = 0, vacation = 0, holiday = 0, credit = 0
+            let cappedEnd = min(calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? monthStart, today)
+            var o = 0, t = 0, v = 0, h = 0, c = 0
             var d = monthStart
             while d <= cappedEnd {
                 if let day = dayMap[AttendanceDay.key(for: d)] {
                     switch day.dayType {
-                    case .office: office += 1
-                    case .travel: travel += 1
-                    case .vacation: vacation += 1
-                    case .holiday: holiday += 1
-                    case .freeDay: credit += 1
-                    default: break
+                    case .office: o += 1; case .travel: t += 1; case .vacation: v += 1
+                    case .holiday: h += 1; case .freeDay: c += 1; default: break
                     }
                 }
                 guard let next = calendar.date(byAdding: .day, value: 1, to: d) else { break }
                 d = next
             }
-
             let types = AppPreferences.dayTypesCountingTowardTarget
-            var credited = office
-            if types.contains("travel") { credited += travel }
-            if types.contains("vacation") { credited += vacation }
-            if types.contains("holiday") { credited += holiday }
-            if types.contains("freeDay") { credited += credit }
+            var cr = o
+            if types.contains("travel") { cr += t }
+            if types.contains("vacation") { cr += v }
+            if types.contains("holiday") { cr += h }
+            if types.contains("freeDay") { cr += c }
+            yO += o; yT += t; yV += v; yH += h; yC += c; yCr += cr
 
-            yearOffice += office; yearTravel += travel; yearVacation += vacation
-            yearHoliday += holiday; yearCredit += credit; yearCredited += credited
-
-            let monthName = month <= monthNames.count ? monthNames[month - 1] : "Month \(month)"
-            html += "<tr><td><b>\(monthName)</b></td>"
-            html += "<td><span class=\"count-badge\" style=\"background:\(officeColor)\">\(office)</span></td>"
-            html += "<td><span class=\"count-badge\" style=\"background:\(travelColor)\">\(travel)</span></td>"
-            html += "<td><span class=\"count-badge\" style=\"background:\(vacationColor)\">\(vacation)</span></td>"
-            html += "<td><span class=\"count-badge\" style=\"background:\(holidayColor)\">\(holiday)</span></td>"
-            html += "<td><span class=\"count-badge\" style=\"background:\(creditColor)\">\(credit)</span></td>"
-            html += "<td><b>\(credited)</b></td></tr>\n"
+            let name = month <= monthNames.count ? monthNames[month - 1] : "Month \(month)"
+            xml += "<Row>"
+            xml += "<Cell ss:StyleID=\"bold\"><Data ss:Type=\"String\">\(name)</Data></Cell>"
+            xml += "<Cell ss:StyleID=\"office\"><Data ss:Type=\"Number\">\(o)</Data></Cell>"
+            xml += "<Cell ss:StyleID=\"travel\"><Data ss:Type=\"Number\">\(t)</Data></Cell>"
+            xml += "<Cell ss:StyleID=\"vacation\"><Data ss:Type=\"Number\">\(v)</Data></Cell>"
+            xml += "<Cell ss:StyleID=\"holiday\"><Data ss:Type=\"Number\">\(h)</Data></Cell>"
+            xml += "<Cell ss:StyleID=\"freeDay\"><Data ss:Type=\"Number\">\(c)</Data></Cell>"
+            xml += "<Cell ss:StyleID=\"bold\"><Data ss:Type=\"Number\">\(cr)</Data></Cell>"
+            xml += "</Row>\n"
         }
 
-        // Year totals row
-        html += "<tr style=\"background:#F3F4F6;font-weight:600\"><td><b>Year Total</b></td>"
-        html += "<td><span class=\"count-badge\" style=\"background:\(officeColor)\">\(yearOffice)</span></td>"
-        html += "<td><span class=\"count-badge\" style=\"background:\(travelColor)\">\(yearTravel)</span></td>"
-        html += "<td><span class=\"count-badge\" style=\"background:\(vacationColor)\">\(yearVacation)</span></td>"
-        html += "<td><span class=\"count-badge\" style=\"background:\(holidayColor)\">\(yearHoliday)</span></td>"
-        html += "<td><span class=\"count-badge\" style=\"background:\(creditColor)\">\(yearCredit)</span></td>"
-        html += "<td><b>\(yearCredited)</b></td></tr>\n"
-        html += "</table>\n"
+        xml += "<Row>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"String\">Year Total</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yO)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yT)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yV)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yH)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yC)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yCr)</Data></Cell>"
+        xml += "</Row>\n"
 
-        // Period summary
+        // Spacer then period summary
+        xml += "<Row></Row><Row></Row>\n"
         let periodTarget = PeriodHelper.targetDaysPerPeriod
-        let periods = PeriodHelper.allPeriods(for: year)
         let periodLabel = AppPreferences.trackingPeriod.shortLabel
-        html += "<div class=\"section-title\">\(periodLabel) Summary</div>\n"
-        html += "<table class=\"summary-table\"><tr><th>\(periodLabel)</th><th>Credited Days</th><th>Target</th><th>Delta</th></tr>\n"
+
+        xml += "<Row>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">\(periodLabel)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Credited</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Target</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Delta</Data></Cell>"
+        xml += "</Row>\n"
 
         var yearTotal = 0
-        for period in periods {
+        for period in PeriodHelper.allPeriods(for: year) {
             guard period.startDate <= today else { continue }
             let count = officeDayCount(in: period)
             yearTotal += count
             let delta = count - periodTarget
             let sign = delta >= 0 ? "+" : ""
             let cls = delta > 0 ? "ahead" : (delta < 0 ? "behind" : "even")
-            html += "<tr><td><b>\(period.label)</b></td><td>\(count)</td><td>\(periodTarget)</td><td class=\"\(cls)\">\(sign)\(delta)</td></tr>\n"
+            xml += "<Row>"
+            xml += "<Cell ss:StyleID=\"bold\"><Data ss:Type=\"String\">\(esc(period.label))</Data></Cell>"
+            xml += "<Cell><Data ss:Type=\"Number\">\(count)</Data></Cell>"
+            xml += "<Cell><Data ss:Type=\"Number\">\(periodTarget)</Data></Cell>"
+            xml += "<Cell ss:StyleID=\"\(cls)\"><Data ss:Type=\"String\">\(sign)\(delta)</Data></Cell>"
+            xml += "</Row>\n"
         }
 
         let yearTarget = periodTarget * PeriodHelper.periodsPerYear
         let yearDelta = yearTotal - yearTarget
         let yearSign = yearDelta >= 0 ? "+" : ""
         let yearCls = yearDelta > 0 ? "ahead" : (yearDelta < 0 ? "behind" : "even")
-        html += "<tr style=\"background:#F3F4F6;font-weight:600\"><td><b>Year Total</b></td><td>\(yearTotal)</td><td>\(yearTarget)</td><td class=\"\(yearCls)\">\(yearSign)\(yearDelta)</td></tr>\n"
-        html += "</table>\n</body></html>"
+        xml += "<Row>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"String\">Year Total</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yearTotal)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yearTarget)</Data></Cell>"
+        xml += "<Cell ss:StyleID=\"\(yearCls)\"><Data ss:Type=\"String\">\(yearSign)\(yearDelta)</Data></Cell>"
+        xml += "</Row>\n"
 
-        return html
+        xml += "</Table></Worksheet>\n</Workbook>"
+        return xml
     }
 
     /// Legacy CSV accessor

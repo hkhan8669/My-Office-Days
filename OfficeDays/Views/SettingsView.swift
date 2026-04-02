@@ -2120,8 +2120,11 @@ struct SpreadsheetShareSheet: UIViewControllerRepresentable {
     let year: Int
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d yyyy"
+        let dateStr = fmt.string(from: Date())
         let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("My Office Days \(year).xls")
+            .appendingPathComponent("My Office Days \(dateStr).xls")
         // Remove stale file to avoid sharing cached data
         try? FileManager.default.removeItem(at: tempURL)
         do {
