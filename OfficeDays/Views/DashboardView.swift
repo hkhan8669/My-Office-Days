@@ -308,12 +308,12 @@ struct DashboardView: View {
             }
             .padding(.top, 4)
 
-            HStack(spacing: 16) {
+            HStack(spacing: 20) {
                 NavigationLink {
                     PeriodSummaryView(viewModel: viewModel, periodOverride: .quarterly)
                 } label: {
                     HStack(spacing: 4) {
-                        Text("View Quarters")
+                        Text("Quarters")
                             .font(.system(size: 13, weight: .semibold))
                         Image(systemName: "chevron.right")
                             .font(.system(size: 11, weight: .semibold))
@@ -321,11 +321,15 @@ struct DashboardView: View {
                     .foregroundStyle(Theme.accent)
                 }
 
+                Text("·")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.outlineVariant)
+
                 NavigationLink {
                     PeriodSummaryView(viewModel: viewModel, periodOverride: .monthly)
                 } label: {
                     HStack(spacing: 4) {
-                        Text("View Monthly")
+                        Text("Monthly")
                             .font(.system(size: 13, weight: .semibold))
                         Image(systemName: "chevron.right")
                             .font(.system(size: 11, weight: .semibold))
