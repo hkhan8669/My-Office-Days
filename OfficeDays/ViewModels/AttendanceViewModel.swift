@@ -703,7 +703,7 @@ final class AttendanceViewModel {
                     html += "<tr>"
                     html += "<td>\(dateFormatter.string(from: current))\(checkIn)</td>"
                     html += "<td>\(weekdayFormatter.string(from: current))</td>"
-                    html += "<td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(day.dayType.label)</span></td>"
+                    html += "<td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(escapeHTML(day.dayType.label))</span></td>"
                     html += "<td>\(location)</td>"
                     html += "<td><span class=\"\(loggedByClass)\">\(loggedByLabel)</span></td>"
                     html += "</tr>\n"

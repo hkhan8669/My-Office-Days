@@ -2081,7 +2081,7 @@ struct HolidayManagementView: View {
                         Toggle("Repeat every year", isOn: $repeatEveryYear)
                     } footer: {
                         if repeatEveryYear {
-                            Text("This holiday will be added on the same date from \(String(Calendar.current.component(.year, from: holidayDate))) through 2030.")
+                            Text("This holiday will be added on the same date from \(String(Calendar.current.component(.year, from: holidayDate))) through 2035.")
                         }
                     }
                 }
@@ -2098,7 +2098,7 @@ struct HolidayManagementView: View {
                         Button("Save") {
                             let trimmedName = holidayName.trimmingCharacters(in: .whitespacesAndNewlines)
                             if repeatEveryYear {
-                                viewModel.addHolidayRepeating(date: holidayDate, name: trimmedName, throughYear: 2030)
+                                viewModel.addHolidayRepeating(date: holidayDate, name: trimmedName, throughYear: 2035)
                             } else {
                                 viewModel.addHoliday(date: holidayDate, name: trimmedName)
                             }
