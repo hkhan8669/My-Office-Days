@@ -98,12 +98,8 @@ final class AttendanceViewModel {
     }
 
     func ensureHolidays(for year: Int) {
-        let dismissed = AppPreferences.dismissedHolidayDateKeys
         var inserted = false
         for holiday in Holiday.federalHolidays(for: year) {
-            let dateKey = AttendanceDay.key(for: holiday.date)
-            if dismissed.contains(dateKey) { continue }
-
             if let existingDay = attendanceDay(for: holiday.date) {
                 if existingDay.dayType == .holiday || !existingDay.isManualOverride {
                     existingDay.dayType = .holiday
@@ -390,26 +386,24 @@ final class AttendanceViewModel {
 
     func deleteHoliday(_ holiday: ManagedHoliday) {
         if let day = attendanceDay(for: holiday.date), day.dayType == .holiday {
-            // Mark as dismissed so ensureHolidays won't re-create it
-            AppPreferences.addDismissedHoliday(day.dateKey)
             modelContext.delete(day)
         }
         saveAndRefresh(userMessage: "Unable to delete the holiday.")
     }
 
-    /// Auto-populate planned days for selected work days from today through end of current year + 2.
+    /// Auto-populate planned days for selected work days from today through end of year.
     /// Skips dates that already have an entry (office, vacation, holiday, etc.).
     func autoPopulatePlannedDays() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let currentYear = calendar.component(.year, from: Date())
-        let endDate = calendar.date(from: DateComponents(year: currentYear + 2, month: 12, day: 31))!
+        let endOfYear = calendar.date(from: DateComponents(year: currentYear, month: 12, day: 31))!
 
         let workDays = AppPreferences.workDays
 
         // Remove existing auto-planned days (non-manual-override planned) from today onward
         let todayKey = AttendanceDay.key(for: today)
-        let endKey = AttendanceDay.key(for: endDate)
+        let endKey = AttendanceDay.key(for: endOfYear)
         let plannedType = DayType.planned.rawValue
         let removeDescriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
@@ -424,7 +418,7 @@ final class AttendanceViewModel {
         // Populate planned days from today onward, skipping any date that already has an entry
         var current = today
         var inserted = false
-        while current <= endDate {
+        while current <= endOfYear {
             let weekday = calendar.component(.weekday, from: current)
             if workDays.contains(weekday) {
                 if attendanceDay(for: current) == nil {
@@ -544,23 +538,37 @@ final class AttendanceViewModel {
         let calendar = Calendar.current
         let startOfYear = calendar.date(from: DateComponents(year: year, month: 1, day: 1)) ?? Date()
         let today = calendar.startOfDay(for: Date())
-        // Only export up to today — no future/planned data
-        let endDate = min(today, calendar.date(from: DateComponents(year: year, month: 12, day: 31)) ?? today)
         let startKey = AttendanceDay.key(for: startOfYear)
-        let endKey = AttendanceDay.key(for: endDate)
+        let todayKey = AttendanceDay.key(for: today)
 
+        // Fetch attendance days up to today only
         let descriptor = FetchDescriptor<AttendanceDay>(
             predicate: #Predicate {
-                $0.dateKey >= startKey && $0.dateKey <= endKey
+                $0.dateKey >= startKey && $0.dateKey <= todayKey
             }
         )
         let days = fetch(descriptor, userMessage: "Unable to prepare the export.")
         let dayMap = Dictionary(uniqueKeysWithValues: days.map { ($0.dateKey, $0) })
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
+        // Fetch geo logs for check-in timestamps
+        let geoDescriptor = FetchDescriptor<GeoLog>(
+            predicate: #Predicate { $0.eventTypeRaw == "autoLogged" },
+            sortBy: [SortDescriptor(\.timestamp)]
+        )
+        let geoLogs = (try? modelContext.fetch(geoDescriptor)) ?? []
+        // Map dateKey → earliest auto-logged time for that day
+        var checkInTimes: [String: Date] = [:]
+        for log in geoLogs {
+            let key = AttendanceDay.key(for: log.timestamp)
+            if checkInTimes[key] == nil { checkInTimes[key] = log.timestamp }
+        }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM d, yyyy"
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.dateFormat = "EEEE"
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "h:mm a"
 
         func escapeHTML(_ string: String) -> String {
             string
@@ -573,20 +581,25 @@ final class AttendanceViewModel {
         func typeColor(_ type: DayType) -> String {
             switch type {
             case .office: return "#DBEAFE"
+            case .planned: return "#FEF3C7"
             case .vacation: return "#D1FAE5"
             case .holiday: return "#EDE9FE"
             case .freeDay: return "#E0F2FE"
             case .travel: return "#FEE2E2"
-            case .planned: return "#FEF3C7"
             case .remote: return "#F3F4F6"
             }
         }
 
         func loggedBy(_ day: AttendanceDay) -> String {
-            if day.dayType == .holiday { return "Auto" }
             if day.isAutoLogged { return "Auto (Geo)" }
             return "Manual"
         }
+
+        let officeColor = "#DBEAFE"
+        let travelColor = "#FEE2E2"
+        let vacationColor = "#D1FAE5"
+        let holidayColor = "#EDE9FE"
+        let creditColor = "#E0F2FE"
 
         var html = """
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
@@ -605,29 +618,54 @@ final class AttendanceViewModel {
         .ahead { color: #059669; font-weight: 600; }
         .behind { color: #DC2626; font-weight: 600; }
         .even { color: #6B7280; font-weight: 600; }
-        .geo { color: #2563EB; font-style: italic; font-size: 12px; }
-        .manual { color: #6B7280; font-size: 12px; }
+        .logged-auto { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #DBEAFE; color: #1D4ED8; font-weight: 600; font-size: 11px; }
+        .logged-manual { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #F3F4F6; color: #6B7280; font-weight: 600; font-size: 11px; }
+        .time { color: #6B7280; font-size: 12px; }
+        .count-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 12px; text-align: center; min-width: 24px; }
         </style>
         </head><body>
         <div class="title">My Office Days — \(year)</div>
-        <div class="subtitle">Exported \(formatter.string(from: Date())) · Data through \(formatter.string(from: endDate)) · Target: \(PeriodHelper.targetDaysPerPeriod) days per \(AppPreferences.trackingPeriod.shortLabel.lowercased())</div>
+        <div class="subtitle">Exported \(dateFormatter.string(from: Date())) · Jan 1 through \(dateFormatter.string(from: today)) · Target: \(PeriodHelper.targetDaysPerPeriod) days per \(AppPreferences.trackingPeriod.shortLabel.lowercased())</div>
         <table>
-        <tr><th>Week</th><th>Date</th><th>Day</th><th>Type</th><th>Office / Notes</th><th>Logged By</th></tr>
+        <tr><th>Date</th><th>Day</th><th>Status</th><th>Location</th><th>Logged By</th></tr>
         """
 
+        // Day-by-day log from Jan 1 to today
         var current = startOfYear
-        while current <= endDate {
-            if AppPreferences.isWorkDay(current) {
-                let day = dayMap[AttendanceDay.key(for: current)]
-                // Skip planned and remote — only export actual attendance
-                if let day, day.dayType != .planned, day.dayType != .remote {
-                    let typeString = day.dayType.shortLabel
-                    let office = escapeHTML(day.officeName ?? day.holidayName ?? "")
-                    let weekOfYear = calendar.component(.weekOfYear, from: current)
+        while current <= today {
+            let key = AttendanceDay.key(for: current)
+            if AppPreferences.isWorkDay(current), let day = dayMap[key] {
+                // Skip planned/remote — only show actual logged activity
+                if day.dayType != .planned && day.dayType != .remote {
+                    let location: String
+                    switch day.dayType {
+                    case .office:
+                        location = escapeHTML(day.officeName ?? "Office")
+                    case .holiday:
+                        location = escapeHTML(day.holidayName ?? "Holiday")
+                    case .vacation:
+                        location = "—"
+                    case .travel:
+                        location = escapeHTML(day.officeName ?? "Travel")
+                    case .freeDay:
+                        location = escapeHTML(day.officeName ?? "—")
+                    default:
+                        location = "—"
+                    }
+
+                    // Date + check-in time combined
+                    let checkIn = checkInTimes[key].map { " · <span class=\"time\">\(timeFormatter.string(from: $0))</span>" } ?? ""
                     let bgColor = typeColor(day.dayType)
-                    let logged = loggedBy(day)
-                    let loggedCls = day.isAutoLogged ? "geo" : "manual"
-                    html += "<tr><td>\(weekOfYear)</td><td>\(formatter.string(from: current))</td><td>\(weekdayFormatter.string(from: current))</td><td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(typeString)</span></td><td>\(office)</td><td class=\"\(loggedCls)\">\(logged)</td></tr>\n"
+                    let loggedByLabel = day.isAutoLogged ? "Auto (Geo)" : "Manual"
+                    let loggedByClass = day.isAutoLogged ? "logged-auto" : "logged-manual"
+
+                    html += "<tr>"
+                    html += "<td>\(dateFormatter.string(from: current))\(checkIn)</td>"
+                    html += "<td>\(weekdayFormatter.string(from: current))</td>"
+                    html += "<td><span class=\"type-badge\" style=\"background:\(bgColor)\">\(day.dayType.label)</span></td>"
+                    html += "<td>\(location)</td>"
+                    html += "<td><span class=\"\(loggedByClass)\">\(loggedByLabel)</span></td>"
+                    html += "</tr>\n"
                 }
             }
             guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
@@ -636,23 +674,93 @@ final class AttendanceViewModel {
 
         html += "</table>\n"
 
+        // Monthly summary with color-coded badges matching the day log
+        html += "<div class=\"section-title\">Monthly Summary</div>\n"
+        html += "<table class=\"summary-table\">"
+        html += "<tr><th>Month</th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(officeColor)\">Office</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(travelColor)\">Travel</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(vacationColor)\">Vacation</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(holidayColor)\">Holidays</span></th>"
+        html += "<th><span class=\"count-badge\" style=\"background:\(creditColor)\">Credit</span></th>"
+        html += "<th>Total Credited</th></tr>\n"
+
+        let monthNames = DateFormatter().monthSymbols ?? []
+        let currentMonth = calendar.component(.month, from: today)
+        var yearOffice = 0, yearTravel = 0, yearVacation = 0, yearHoliday = 0, yearCredit = 0, yearCredited = 0
+
+        for month in 1...currentMonth {
+            guard let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
+                  let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart) else { continue }
+            let monthEnd = calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? monthStart
+            let cappedEnd = min(monthEnd, today)
+
+            var office = 0, travel = 0, vacation = 0, holiday = 0, credit = 0
+            var d = monthStart
+            while d <= cappedEnd {
+                if let day = dayMap[AttendanceDay.key(for: d)] {
+                    switch day.dayType {
+                    case .office: office += 1
+                    case .travel: travel += 1
+                    case .vacation: vacation += 1
+                    case .holiday: holiday += 1
+                    case .freeDay: credit += 1
+                    default: break
+                    }
+                }
+                guard let next = calendar.date(byAdding: .day, value: 1, to: d) else { break }
+                d = next
+            }
+
+            let types = AppPreferences.dayTypesCountingTowardTarget
+            var credited = office
+            if types.contains("travel") { credited += travel }
+            if types.contains("vacation") { credited += vacation }
+            if types.contains("holiday") { credited += holiday }
+            if types.contains("freeDay") { credited += credit }
+
+            yearOffice += office; yearTravel += travel; yearVacation += vacation
+            yearHoliday += holiday; yearCredit += credit; yearCredited += credited
+
+            let monthName = month <= monthNames.count ? monthNames[month - 1] : "Month \(month)"
+            html += "<tr><td><b>\(monthName)</b></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(officeColor)\">\(office)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(travelColor)\">\(travel)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(vacationColor)\">\(vacation)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(holidayColor)\">\(holiday)</span></td>"
+            html += "<td><span class=\"count-badge\" style=\"background:\(creditColor)\">\(credit)</span></td>"
+            html += "<td><b>\(credited)</b></td></tr>\n"
+        }
+
+        // Year totals row
+        html += "<tr style=\"background:#F3F4F6;font-weight:600\"><td><b>Year Total</b></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(officeColor)\">\(yearOffice)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(travelColor)\">\(yearTravel)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(vacationColor)\">\(yearVacation)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(holidayColor)\">\(yearHoliday)</span></td>"
+        html += "<td><span class=\"count-badge\" style=\"background:\(creditColor)\">\(yearCredit)</span></td>"
+        html += "<td><b>\(yearCredited)</b></td></tr>\n"
+        html += "</table>\n"
+
         // Period summary
+        let periodTarget = PeriodHelper.targetDaysPerPeriod
+        let periods = PeriodHelper.allPeriods(for: year)
         let periodLabel = AppPreferences.trackingPeriod.shortLabel
         html += "<div class=\"section-title\">\(periodLabel) Summary</div>\n"
         html += "<table class=\"summary-table\"><tr><th>\(periodLabel)</th><th>Credited Days</th><th>Target</th><th>Delta</th></tr>\n"
 
         var yearTotal = 0
-        for period in PeriodHelper.allPeriods(for: year) {
+        for period in periods {
+            guard period.startDate <= today else { continue }
             let count = officeDayCount(in: period)
             yearTotal += count
-            let target = PeriodHelper.targetDaysPerPeriod
-            let delta = count - target
+            let delta = count - periodTarget
             let sign = delta >= 0 ? "+" : ""
             let cls = delta > 0 ? "ahead" : (delta < 0 ? "behind" : "even")
-            html += "<tr><td><b>\(period.label)</b></td><td>\(count)</td><td>\(target)</td><td class=\"\(cls)\">\(sign)\(delta)</td></tr>\n"
+            html += "<tr><td><b>\(period.label)</b></td><td>\(count)</td><td>\(periodTarget)</td><td class=\"\(cls)\">\(sign)\(delta)</td></tr>\n"
         }
 
-        let yearTarget = PeriodHelper.targetDaysPerPeriod * PeriodHelper.periodsPerYear
+        let yearTarget = periodTarget * PeriodHelper.periodsPerYear
         let yearDelta = yearTotal - yearTarget
         let yearSign = yearDelta >= 0 ? "+" : ""
         let yearCls = yearDelta > 0 ? "ahead" : (yearDelta < 0 ? "behind" : "even")
