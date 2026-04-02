@@ -28,7 +28,7 @@ struct DashboardView: View {
     }
 
     private var daysRemaining: Int {
-        max(0, target - creditedDays - snap.futureCreditedDays - snap.plannedDays)
+        max(0, target - creditedDays - snap.futureCreditedDays)
     }
 
     private var weeksRemaining: Int {
@@ -40,7 +40,8 @@ struct DashboardView: View {
     }
 
     private var pace: PeriodHelper.PaceStatus {
-        PeriodHelper.paceStatus(officeDays: creditedDays, in: period, asOf: Date())
+        // Include future credited days (holidays, vacation already scheduled) for accurate pace
+        PeriodHelper.paceStatus(officeDays: creditedDays + snap.futureCreditedDays, in: period, asOf: Date())
     }
 
     private var progress: Double {
@@ -139,8 +140,14 @@ struct DashboardView: View {
             // Stats breakdown
             VStack(spacing: 12) {
                 paceStatRow(label: "Credited office days", value: "\(creditedDays)")
+                if snap.futureCreditedDays > 0 {
+                    paceStatRow(label: "Scheduled (holidays/vacation)", value: "\(snap.futureCreditedDays)")
+                }
                 paceStatRow(label: "\(AppPreferences.trackingPeriod.label) target", value: "\(target)")
                 paceStatRow(label: "Days still needed", value: "\(daysRemaining)")
+                if snap.plannedDays > 0 {
+                    paceStatRow(label: "Planned office days", value: "\(snap.plannedDays)")
+                }
                 paceStatRow(label: "Work days remaining", value: "\(weekdaysRemaining)")
                 if daysRemaining > 0, weeksRemaining > 0 {
                     paceStatRow(
@@ -265,7 +272,7 @@ struct DashboardView: View {
             // Ring legend
             HStack(spacing: 12) {
                 legendSquare(color: Theme.accent, label: "Office Days", count: creditedDays)
-                legendSquare(color: Theme.accent.opacity(0.3), label: "Upcoming", count: snap.futureCreditedDays)
+                legendSquare(color: Theme.accent.opacity(0.3), label: "Holidays / Vacation", count: snap.futureCreditedDays)
                 legendSquare(color: Theme.planned.opacity(0.35), label: "Planned", count: snap.plannedDays)
             }
             .padding(.top, 2)
