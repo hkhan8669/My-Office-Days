@@ -378,22 +378,20 @@ struct DashboardView: View {
                 }
             }
 
-            if DateHelper.isWeekday(Date()) {
-                Button {
-                    showDayDetail = true
-                } label: {
-                    Text("Log Today's Status")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 14)
-                        .background(
-                            Capsule()
-                                .fill(Theme.accent)
-                        )
-                }
-                .buttonStyle(PressableButtonStyle())
+            Button {
+                showDayDetail = true
+            } label: {
+                Text("Log Today's Status")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .fill(Theme.accent)
+                    )
             }
+            .buttonStyle(PressableButtonStyle())
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
@@ -512,7 +510,7 @@ struct DashboardView: View {
         // Walk backwards from today up to 14 days to find recent logged days
         for offset in 0..<14 {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
-            guard AppPreferences.isWorkDay(date) else { continue } // work days only
+            // Show any logged day regardless of work-day config
             guard date >= period.startDate else { break }
 
             if let day = viewModel.attendanceDay(for: date) {

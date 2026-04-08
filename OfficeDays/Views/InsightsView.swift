@@ -7,8 +7,7 @@ struct InsightsView: View {
     @Query(sort: \GeoLog.timestamp, order: .reverse)
     private var geoLogs: [GeoLog]
 
-    @State private var showShareSheet = false
-    @State private var csvContent = ""
+    @State private var exportFileURL: IdentifiableURL?
     @State private var cachedStreak = 0
 
     var body: some View {
@@ -28,8 +27,8 @@ struct InsightsView: View {
             .navigationBarTitleDisplayMode(.large)
             .onAppear { cachedStreak = computeStreak() }
         }
-        .sheet(isPresented: $showShareSheet) {
-            SpreadsheetShareSheet(content: csvContent, year: Calendar.current.component(.year, from: Date()))
+        .sheet(item: $exportFileURL) { item in
+            ShareSheet(activityItems: [item.url])
         }
     }
 
@@ -51,10 +50,14 @@ struct InsightsView: View {
 
                 Button {
                     let year = Calendar.current.component(.year, from: Date())
-                    csvContent = viewModel.exportCSV(year: year)
-                    showShareSheet = true
+                    do {
+                        let url = try viewModel.exportCSVFileURL(startYear: year)
+                        exportFileURL = IdentifiableURL(url: url)
+                    } catch {
+                        viewModel.lastErrorMessage = "Unable to create the CSV export."
+                    }
                 } label: {
-                    Label("Export Spreadsheet", systemImage: "square.and.arrow.up")
+                    Label("Export CSV", systemImage: "square.and.arrow.up")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.accent)
                         .padding(.horizontal, 14)
@@ -178,7 +181,6 @@ struct InsightsView: View {
         switch eventType {
         case .entry: return Theme.vacation    // Green
         case .exit: return Theme.behind       // Red
-        case .autoLogged: return Theme.onTrack // Blue
         }
     }
 
@@ -186,7 +188,6 @@ struct InsightsView: View {
         switch eventType {
         case .entry: return "arrow.down.circle.fill"
         case .exit: return "arrow.up.circle.fill"
-        case .autoLogged: return "checkmark.shield.fill"
         }
     }
 
@@ -194,7 +195,6 @@ struct InsightsView: View {
         switch eventType {
         case .entry: return "ENTERED"
         case .exit: return "EXITED"
-        case .autoLogged: return "LOGGED"
         }
     }
 
@@ -215,29 +215,36 @@ struct InsightsView: View {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let allDays = loadAllDays()
-        let officeDays = Set(
+        let creditedDays = Set(
             allDays
                 .filter { $0.dayType.countsTowardTarget }
                 .map { AttendanceDay.key(for: $0.date) }
         )
 
         var streak = 0
-        var checkDate = today
-        // Safety: never look back more than 1 year
+        // Start from today if already logged, otherwise yesterday —
+        // so an unlogged morning doesn't reset the streak to 0.
+        let todayKey = AttendanceDay.key(for: today)
+        var checkDate = creditedDays.contains(todayKey) ? today :
+            (calendar.date(byAdding: .day, value: -1, to: today) ?? today)
         let maxLookback = calendar.date(byAdding: .year, value: -1, to: today) ?? today
 
         while checkDate >= maxLookback {
             guard let prevDate = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
-            if !AppPreferences.isWorkDay(checkDate) {
-                checkDate = prevDate
-                continue
-            }
-            if officeDays.contains(AttendanceDay.key(for: checkDate)) {
+            let key = AttendanceDay.key(for: checkDate)
+            let weekday = calendar.component(.weekday, from: checkDate)
+            let isWeekend = weekday == 1 || weekday == 7 // Sun or Sat
+
+            if creditedDays.contains(key) {
+                // This day has credited attendance — extend streak
                 streak += 1
-                checkDate = prevDate
+            } else if isWeekend {
+                // Weekend without credited attendance — skip, don't break
             } else {
+                // Weekday without credited attendance — streak broken
                 break
             }
+            checkDate = prevDate
         }
         return streak
     }
@@ -398,16 +405,23 @@ struct InsightsView: View {
 
     // MARK: - Helpers
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, yyyy"
+        return f
+    }()
+
     private func timeString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: date)
+        Self.timeFormatter.string(from: date)
     }
 
     private func dateString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
-        return formatter.string(from: date)
+        Self.dateFormatter.string(from: date)
     }
 }
-

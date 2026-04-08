@@ -46,7 +46,6 @@ struct CalendarTabView: View {
                                     for (dateKey, frame) in cellFrames {
                                         if frame.contains(location) {
                                             if let date = Self.dateKeyFormatter.date(from: dateKey),
-                                               DateHelper.isWeekday(date),
                                                date >= today,
                                                !multiSelectedDates.contains(dateKey) {
                                                 multiSelectedDates.insert(dateKey)
@@ -284,8 +283,6 @@ struct CalendarTabView: View {
         let isSelected = multiSelectedDates.contains(dateKey)
 
         return Button {
-            guard DateHelper.isWeekday(date) else { return }
-
             if isMultiSelectMode {
                 let today = Calendar.current.startOfDay(for: Date())
                 guard date >= today else { return }
@@ -386,7 +383,7 @@ struct CalendarTabView: View {
             LongPressGesture(minimumDuration: 0.5)
                 .onEnded { _ in
                     let today = Calendar.current.startOfDay(for: Date())
-                    guard DateHelper.isWeekday(date), date >= today else { return }
+                    guard date >= today else { return }
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isMultiSelectMode = true
                         multiSelectedDates.insert(dateKey)
@@ -601,9 +598,6 @@ struct CalendarTabView: View {
     }
 
     private func accessibilityHint(for date: Date, isFuture: Bool, isWeekend: Bool) -> String {
-        if isWeekend {
-            return "Weekends are not editable."
-        }
         if isMultiSelectMode {
             return "Double tap to toggle selection."
         }

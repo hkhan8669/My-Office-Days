@@ -167,7 +167,7 @@ struct PeriodSummaryView: View {
             }
             .padding(.bottom, 16)
 
-            // Progress bar
+            // Progress bar — total credited days
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
@@ -175,7 +175,13 @@ struct PeriodSummaryView: View {
                         .frame(height: 8)
 
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Theme.accent)
+                        .fill(
+                            LinearGradient(
+                                colors: [Theme.accent, Theme.primaryContainer],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .frame(width: max(0, geo.size.width * progress), height: 8)
                         .animation(.spring(response: 0.6, dampingFraction: 0.8), value: progress)
                 }

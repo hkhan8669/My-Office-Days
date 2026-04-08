@@ -209,7 +209,7 @@ private struct OnboardingFlowView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .padding(.bottom, 8)
 
-            Text("Track your office attendance effortlessly with automatic check-ins and smart insights.")
+            Text("Plan and log your office attendance effortlessly with arrival reminders and smart insights.")
                 .font(.body)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -245,7 +245,7 @@ private struct OnboardingFlowView: View {
                     icon: "building.2.fill",
                     color: Theme.accent,
                     title: "Add Your Office",
-                    subtitle: "Search for your office address to enable automatic check-ins."
+                    subtitle: "Search for your office address to enable arrival reminders."
                 )
 
                 // Office name
@@ -347,9 +347,9 @@ private struct OnboardingFlowView: View {
                 if let selected = selectedOfficeMapItem {
                     VStack(spacing: 10) {
                         ZStack(alignment: .bottomTrailing) {
-                            Map(coordinateRegion: .constant(officeMapRegion),
-                                annotationItems: [OnboardingMapPin(coordinate: selected.placemark.coordinate)]) { pin in
-                                MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                            Map(position: .constant(.region(officeMapRegion))) {
+                                Marker("", coordinate: selected.placemark.coordinate)
+                                    .tint(Color(hex: 0x0064D2))
                             }
                             .frame(height: 160)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -441,11 +441,16 @@ private struct OnboardingFlowView: View {
                     }
                 }
 
-                Text("You can add more offices anytime in Setup.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.onSurfaceVariant)
-
                 Spacer(minLength: 40)
+
+                if !offices.isEmpty {
+                    Text("Have another office? Add it above, or tap Continue.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.onSurfaceVariant)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 4)
+                }
 
                 onboardingButton("Continue") { step = 2 }
                     .disabled(viewModel.offices().isEmpty)
@@ -575,34 +580,56 @@ private struct OnboardingFlowView: View {
                     icon: "checkmark.shield.fill",
                     color: Theme.accent,
                     title: "Permissions",
-                    subtitle: "For the best experience, enable location and notifications."
+                    subtitle: "To send you arrival reminders and help you log your attendance, the app needs a couple of permissions."
                 )
+
+                // How it works
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("HOW AUTO-TRACKING WORKS")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.textTertiary)
+                        .tracking(1)
+
+                    Text("My Office Days uses geofencing to send you a reminder when you arrive at one of your saved locations, so you can log your attendance. For this to work in the background, location access must be set to \"Always Allow.\"")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                }
 
                 VStack(spacing: 12) {
                     permissionCard(
                         icon: "location.fill",
                         color: Theme.accent,
-                        title: "Location — Always",
-                        subtitle: "Detects when you arrive at the office, even in the background. We recommend \"Always\" for reliable auto-logging.",
+                        title: "Location — Always Allow",
+                        subtitle: "Required for arrival reminders. Without \"Always,\" the app can only work while open.",
                         recommended: true
                     )
                     permissionCard(
                         icon: "bell.badge.fill",
                         color: Theme.planned,
                         title: "Notifications",
-                        subtitle: "Get check-in confirmations when you arrive and weekly progress reminders.",
+                        subtitle: "Get a confirmation each time your attendance is logged, plus weekly progress reminders.",
                         recommended: false
                     )
                 }
 
-                HStack(spacing: 6) {
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.accent.opacity(0.7))
-                    Text("Your location is only used to detect office arrivals. Nothing is shared or uploaded.")
+                // Privacy callout
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Theme.vacation)
+                        Text("Privacy First")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(Theme.onSurface)
+                    }
+
+                    Text("All your data is stored locally on your device. Nothing is ever sent to a server, shared with third parties, or uploaded to the cloud. Your location is only used to detect office arrivals — never tracked or recorded beyond that.")
                         .font(.caption)
                         .foregroundStyle(Theme.onSurfaceVariant)
                 }
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Theme.vacation.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.vacation.opacity(0.2), lineWidth: 0.5))
 
                 Spacer(minLength: 40)
 
@@ -778,11 +805,6 @@ private struct OnboardingFlowView: View {
     }
 }
 
-private struct OnboardingMapPin: Identifiable {
-    let id = UUID()
-    let coordinate: CLLocationCoordinate2D
-}
-
 // MARK: - Always Location Required
 
 private struct AlwaysLocationRequiredView: View {
@@ -807,7 +829,7 @@ private struct AlwaysLocationRequiredView: View {
                         .font(.title3.weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
 
-                    Text("Office Days requires \"Always\" location access to detect when you arrive at the office — even when the app is closed or your phone restarts.")
+                    Text("My Office Days needs \"Always\" location access to send you arrival reminders when you reach a saved location — even when the app is in the background.")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)

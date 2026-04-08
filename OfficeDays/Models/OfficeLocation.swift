@@ -4,6 +4,8 @@ import CoreLocation
 
 @Model
 final class OfficeLocation {
+    /// Stable identifier for geofence region — survives office renames.
+    var stableID: String
     var name: String
     var address: String
     var latitude: Double
@@ -21,11 +23,12 @@ final class OfficeLocation {
         isEnabled: Bool = true,
         isCustom: Bool = false
     ) {
+        self.stableID = UUID().uuidString
         self.name = name
         self.address = address
         self.latitude = latitude
         self.longitude = longitude
-        self.geofenceRadius = geofenceRadius
+        self.geofenceRadius = max(50, min(geofenceRadius, 5000))
         self.isEnabled = isEnabled
         self.isCustom = isCustom
     }
@@ -38,7 +41,7 @@ final class OfficeLocation {
         let region = CLCircularRegion(
             center: coordinate,
             radius: geofenceRadius,
-            identifier: name
+            identifier: stableID
         )
         region.notifyOnEntry = true
         region.notifyOnExit = true

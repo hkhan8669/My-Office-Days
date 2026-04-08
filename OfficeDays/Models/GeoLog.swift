@@ -6,7 +6,6 @@ final class GeoLog {
     enum EventType: String, Codable {
         case entry = "entry"
         case exit = "exit"
-        case autoLogged = "autoLogged"
     }
 
     var timestamp: Date
@@ -15,6 +14,7 @@ final class GeoLog {
 
     @Transient
     var eventType: EventType {
+        // Legacy "autoLogged" records are treated as entry
         get { EventType(rawValue: eventTypeRaw) ?? .entry }
         set { eventTypeRaw = newValue.rawValue }
     }

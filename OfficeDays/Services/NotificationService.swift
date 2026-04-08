@@ -108,8 +108,12 @@ final class NotificationService {
         content.sound = .default
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        // Use office name + today's date as ID so each office gets its own
+        // notification per day, and yesterday's stale notifications are replaced.
+        let today = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none)
+        let safeOfficeName = officeName.replacingOccurrences(of: " ", with: "-").prefix(30)
         let request = UNNotificationRequest(
-            identifier: "checkin-latest",
+            identifier: "checkin-\(safeOfficeName)-\(today)",
             content: content,
             trigger: trigger
         )

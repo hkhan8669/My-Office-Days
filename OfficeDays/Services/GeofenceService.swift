@@ -1,6 +1,7 @@
 import CoreLocation
 import Foundation
 import SwiftData
+import UIKit
 import UserNotifications
 
 @MainActor
@@ -12,9 +13,6 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private let entryTimestampsKey = "tracking.entryTimestamps"
     private let lastCheckInOfficeKey = "tracking.lastCheckInOffice"
     private let lastCheckInDateKey = "tracking.lastCheckInDate"
-    /// Tracks last notification time per office to debounce flaky GPS at boundaries.
-    private var lastNotificationTime: [String: Date] = [:]
-    private let notificationDebounceInterval: TimeInterval = 600 // 10 minutes
 
     private var modelContext: ModelContext?
     private var officesProvider: (() -> [OfficeLocation])?
@@ -125,14 +123,32 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             return
         }
 
-        for region in locationManager.monitoredRegions {
-            locationManager.stopMonitoring(for: region)
+        // iOS allows max 20 monitored regions per app.
+        let monitorableOffices = Array(offices.prefix(20))
+        if offices.count > 20 {
+            errorMessage = "Only the first 20 offices can be monitored. Please disable some offices."
         }
 
-        for office in offices {
-            let region = office.region
-            locationManager.startMonitoring(for: region)
-            locationManager.requestState(for: region)
+        // Only update regions that actually changed — avoid stop/restart
+        // which resets iOS region state and drops pending exit events.
+        let desiredRegions = Set(monitorableOffices.map(\.stableID))
+        let currentRegions = Set(locationManager.monitoredRegions.compactMap(\.identifier))
+
+        // Remove regions no longer needed
+        for region in locationManager.monitoredRegions {
+            if !desiredRegions.contains(region.identifier) {
+                locationManager.stopMonitoring(for: region)
+            }
+        }
+
+        // Add new regions not yet monitored
+        for office in monitorableOffices {
+            if !currentRegions.contains(office.stableID) {
+                let region = office.region
+                locationManager.startMonitoring(for: region)
+            }
+            // Always request state to catch up
+            locationManager.requestState(for: office.region)
         }
 
         isMonitoring = true
@@ -140,6 +156,15 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func handleAppDidBecomeActive() {
+        // Clear entry timestamps from previous days so today's geofence
+        // events are properly recorded in the log.
+        let todayStart = Calendar.current.startOfDay(for: now())
+        for (office, timestamp) in entryTimestamps {
+            if timestamp < todayStart {
+                clearEntryTimestamp(for: office)
+            }
+        }
+
         authorizationStatus = locationManager.authorizationStatus
         refreshNotificationStatus()
         refreshMonitoring()
@@ -205,48 +230,69 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
         guard let circularRegion = region as? CLCircularRegion else { return }
-        guard DateHelper.isWeekday(now()) else { return }
 
-        persistEntryTimestamp(now(), for: circularRegion.identifier)
-        recordGeoLog(eventType: .entry, locationName: circularRegion.identifier)
-
-        // Log the office day immediately on entry – no dwell wait.
-        logOfficeDayIfNeeded(officeName: circularRegion.identifier)
-
-        // Debounce notifications to avoid spam from flaky GPS at boundaries.
-        let office = circularRegion.identifier
-        if let lastTime = lastNotificationTime[office],
-           now().timeIntervalSince(lastTime) < notificationDebounceInterval {
-            return
+        // Request background time to ensure saves complete before iOS kills the app.
+        var taskID = UIBackgroundTaskIdentifier.invalid
+        taskID = UIApplication.shared.beginBackgroundTask {
+            UIApplication.shared.endBackgroundTask(taskID)
         }
-        lastNotificationTime[office] = now()
-        sendArrivalNotification(officeName: office)
+
+        let regionID = circularRegion.identifier
+        let name = officeName(for: regionID)
+
+        persistEntryTimestamp(now(), for: regionID)
+        recordGeoLog(eventType: .entry, locationName: name)
+        logOfficeDayIfNeeded(officeName: name)
+        sendArrivalNotification(officeName: name)
+
+        UIApplication.shared.endBackgroundTask(taskID)
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
         guard let circularRegion = region as? CLCircularRegion else { return }
-        recordGeoLog(eventType: .exit, locationName: circularRegion.identifier)
-        clearEntryTimestamp(for: circularRegion.identifier)
+
+        var taskID = UIBackgroundTaskIdentifier.invalid
+        taskID = UIApplication.shared.beginBackgroundTask {
+            UIApplication.shared.endBackgroundTask(taskID)
+        }
+
+        let regionID = circularRegion.identifier
+        let name = officeName(for: regionID)
+
+        recordGeoLog(eventType: .exit, locationName: name)
+        clearEntryTimestamp(for: regionID)
         refreshStatusMessage()
+
+        UIApplication.shared.endBackgroundTask(taskID)
     }
 
     func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
         guard let circularRegion = region as? CLCircularRegion else { return }
-        guard DateHelper.isWeekday(now()) else { return }
+
+        var taskID = UIBackgroundTaskIdentifier.invalid
+        taskID = UIApplication.shared.beginBackgroundTask {
+            UIApplication.shared.endBackgroundTask(taskID)
+        }
+
+        let regionID = circularRegion.identifier
+        let name = officeName(for: regionID)
 
         switch state {
         case .inside:
-            if entryTimestamps[circularRegion.identifier] == nil {
-                persistEntryTimestamp(now(), for: circularRegion.identifier)
-                recordGeoLog(eventType: .entry, locationName: circularRegion.identifier)
+            let alreadyTracked = entryTimestamps[regionID] != nil
+            if !alreadyTracked {
+                persistEntryTimestamp(now(), for: regionID)
+                recordGeoLog(eventType: .entry, locationName: name)
+                sendArrivalNotification(officeName: name)
             }
-            // Log immediately when detected inside
-            logOfficeDayIfNeeded(officeName: circularRegion.identifier)
+            logOfficeDayIfNeeded(officeName: name)
         case .outside:
-            clearEntryTimestamp(for: circularRegion.identifier)
+            clearEntryTimestamp(for: regionID)
         default:
             break
         }
+
+        UIApplication.shared.endBackgroundTask(taskID)
     }
 
     // MARK: - Private
@@ -257,12 +303,14 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         let period = PeriodHelper.currentPeriod()
         let startKey = AttendanceDay.key(for: period.startDate)
         let endKey = AttendanceDay.key(for: period.endDate)
+        // Fetch all non-remote day types in the period, then filter by user preferences
         var descriptor = FetchDescriptor<AttendanceDay>(
-            predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= endKey && ($0.dayTypeRaw == "office" || $0.dayTypeRaw == "freeDay" || $0.dayTypeRaw == "travel") }
+            predicate: #Predicate { $0.dateKey >= startKey && $0.dateKey <= endKey && $0.dayTypeRaw != "remote" }
         )
         descriptor.fetchLimit = 500
 
-        let officeDays = (try? context.fetch(descriptor).count) ?? 0
+        let allDays = (try? context.fetch(descriptor)) ?? []
+        let officeDays = allDays.filter { $0.dayType.countsTowardTarget }.count
         let target = PeriodHelper.targetDaysPerPeriod
 
         notificationService.scheduleWeeklyNudgeIfAuthorized(
@@ -312,7 +360,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         }
 
         if authorizationStatus != .authorizedAlways {
-            statusMessage = "Allow Always Location to auto-log in the background"
+            statusMessage = "Set location to \"Always\" for arrival reminders in the background"
             return
         }
 
@@ -384,8 +432,13 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             attendanceRefreshHandler?()
             refreshStatusMessage()
         } catch {
-            errorMessage = "Auto check-in failed: \(error.localizedDescription)"
+            errorMessage = "Attendance logging failed: \(error.localizedDescription)"
         }
+    }
+
+    /// Resolve a region stableID to the office name. Falls back to the ID itself.
+    private func officeName(for regionIdentifier: String) -> String {
+        officesProvider?().first(where: { $0.stableID == regionIdentifier })?.name ?? regionIdentifier
     }
 
     private func persistEntryTimestamp(_ date: Date, for officeName: String) {

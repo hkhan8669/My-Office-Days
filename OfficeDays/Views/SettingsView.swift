@@ -6,8 +6,7 @@ struct SettingsView: View {
     let viewModel: AttendanceViewModel
     @ObservedObject var geofenceService: GeofenceService
 
-    @State private var showExportShare = false
-    @State private var csvContent = ""
+    @State private var exportFileURL: IdentifiableURL?
     @State private var exportYear = Calendar.current.component(.year, from: Date())
     @State private var trackingPeriod = AppPreferences.trackingPeriod
     @State private var targetDaysPerPeriod = PeriodHelper.targetDaysPerPeriod
@@ -21,6 +20,8 @@ struct SettingsView: View {
     @State private var creditCounts = AppPreferences.dayTypesCountingTowardTarget.contains("freeDay")
     @State private var detectionRadius: Double = 820
     @State private var showAddOffice = false
+    @State private var refreshLabel = "Refresh Monitoring Status"
+    @State private var showDeleteConfirmation = false
     @State private var currentYearHolidays: [AttendanceViewModel.ManagedHoliday] = []
     private static func nudgeDate() -> Date {
         Calendar.current.date(from: DateComponents(hour: AppPreferences.nudgeHour, minute: AppPreferences.nudgeMinute)) ?? Date()
@@ -72,6 +73,10 @@ struct SettingsView: View {
                     dataSection
                         .padding(.bottom, 24)
 
+                    // MARK: - Data & Privacy
+                    dataPrivacySection
+                        .padding(.bottom, 24)
+
                     // MARK: - About
                     aboutSection
                 }
@@ -88,8 +93,16 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
             }
-            .sheet(isPresented: $showExportShare) {
-                SpreadsheetShareSheet(content: csvContent, year: exportYear)
+            .sheet(item: $exportFileURL) { item in
+                ShareSheet(activityItems: [item.url])
+            }
+            .alert("Delete All Data?", isPresented: $showDeleteConfirmation) {
+                Button("Delete Everything", role: .destructive) {
+                    viewModel.deleteAllData()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete all your attendance records, office locations, geo logs, and settings. This cannot be undone.")
             }
         }
         .sheet(isPresented: $showAddOffice) {
@@ -392,7 +405,7 @@ struct SettingsView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.caption)
                                 .foregroundStyle(Theme.planned)
-                            Text("\"While Using App\" won't track in the background. Change to \"Always\" in Settings for automatic office detection.")
+                            Text("\"While Using App\" won't send arrival reminders in the background. Change to \"Always\" in Settings.")
                                 .font(.caption)
                                 .foregroundStyle(Theme.textSecondary)
                         }
@@ -448,14 +461,22 @@ struct SettingsView: View {
                 // Refresh Button
                 Button {
                     geofenceService.handleAppDidBecomeActive()
+                    withAnimation {
+                        refreshLabel = "Monitoring Refreshed ✓"
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation {
+                            refreshLabel = "Refresh Monitoring Status"
+                        }
+                    }
                 } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: "arrow.clockwise")
+                        Image(systemName: refreshLabel.contains("✓") ? "checkmark.circle.fill" : "arrow.clockwise")
                             .font(.caption.weight(.semibold))
-                        Text("Refresh Monitoring Status")
+                        Text(refreshLabel)
                             .font(.caption.weight(.semibold))
                     }
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(refreshLabel.contains("✓") ? Theme.vacation : Theme.accent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                 }
@@ -1079,16 +1100,92 @@ struct SettingsView: View {
                     .padding(.leading, 60)
 
                 Button {
-                    csvContent = viewModel.exportCSV(year: exportYear)
-                    showExportShare = true
+                    do {
+                        let url = try viewModel.exportCSVFileURL(startYear: exportYear)
+                        exportFileURL = IdentifiableURL(url: url)
+                    } catch {
+                        viewModel.lastErrorMessage = "Unable to create the CSV export."
+                    }
                 } label: {
                     configRow(
                         icon: "square.and.arrow.up.fill",
                         iconColor: Theme.holiday,
-                        title: "Export Spreadsheet",
-                        subtitle: "Download spreadsheet for \(exportYear)"
+                        title: "Export CSV",
+                        subtitle: "Download CSV from \(exportYear) onward"
                     )
                 }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Theme.surfaceContainerLowest)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Theme.outlineVariant.opacity(0.2), lineWidth: 0.5)
+            )
+        }
+    }
+
+    // MARK: - Data & Privacy Section
+
+    private var dataPrivacySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("DATA & PRIVACY")
+
+            VStack(spacing: 0) {
+                // Privacy info
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Theme.vacation.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.vacation)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Privacy First")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.onSurface)
+                        Text("All data is stored locally on your device. Nothing is sent to any server or shared with anyone.")
+                            .font(.caption)
+                            .foregroundStyle(Theme.onSurfaceVariant)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+
+                Divider()
+                    .foregroundStyle(Theme.outlineVariant.opacity(0.3))
+                    .padding(.leading, 60)
+
+                // Delete all data
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.red.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.red)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Delete All My Data")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.red)
+                            Text("Permanently removes all attendance records, offices, and settings")
+                                .font(.caption)
+                                .foregroundStyle(Theme.onSurfaceVariant)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
             }
             .background(
                 RoundedRectangle(cornerRadius: 14)
@@ -1392,8 +1489,9 @@ private struct EditOfficeSheet: View {
                 VStack(spacing: 20) {
                     // Map preview
                     ZStack(alignment: .bottomTrailing) {
-                        Map(coordinateRegion: $region, annotationItems: [MapPin(coordinate: currentCoordinate)]) { pin in
-                            MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                        Map(position: .constant(.region(region))) {
+                            Marker("", coordinate: currentCoordinate)
+                                .tint(Color(hex: 0x0064D2))
                         }
                         .frame(height: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -1767,8 +1865,9 @@ struct AddOfficeSheet: View {
                     // Show map preview
                     VStack(spacing: 8) {
                         ZStack(alignment: .bottomTrailing) {
-                            Map(coordinateRegion: .constant(region), annotationItems: [MapPin(coordinate: selected.placemark.coordinate)]) { pin in
-                                MapMarker(coordinate: pin.coordinate, tint: Color(hex: 0x0064D2))
+                            Map(position: .constant(.region(region))) {
+                                Marker("", coordinate: selected.placemark.coordinate)
+                                    .tint(Color(hex: 0x0064D2))
                             }
                             .frame(height: 200)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -1888,12 +1987,6 @@ struct AddOfficeSheet: View {
         geofenceService.refreshMonitoring()
         dismiss()
     }
-}
-
-// Helper for map annotation
-private struct MapPin: Identifiable {
-    let id = UUID()
-    let coordinate: CLLocationCoordinate2D
 }
 
 // Extension to get formatted address from CLPlacemark
@@ -2119,25 +2212,16 @@ struct HolidayManagementView: View {
 
 // MARK: - Spreadsheet Share Sheet
 
-struct SpreadsheetShareSheet: UIViewControllerRepresentable {
-    let content: String
-    let year: Int
+struct IdentifiableURL: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MMM d yyyy"
-        let dateStr = fmt.string(from: Date())
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("My Office Days \(dateStr).xls")
-        // Remove stale file to avoid sharing cached data
-        try? FileManager.default.removeItem(at: tempURL)
-        do {
-            try content.write(to: tempURL, atomically: true, encoding: .utf8)
-            return UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-        } catch {
-            // Fallback: share as plain text if file write fails
-            return UIActivityViewController(activityItems: [content], applicationActivities: nil)
-        }
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

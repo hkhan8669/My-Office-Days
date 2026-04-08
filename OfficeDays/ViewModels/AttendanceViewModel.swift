@@ -99,8 +99,11 @@ final class AttendanceViewModel {
     }
 
     func ensureHolidays(for year: Int) {
+        let dismissed = AppPreferences.dismissedHolidayDateKeys
         var inserted = false
         for holiday in Holiday.federalHolidays(for: year) {
+            let dateKey = AttendanceDay.key(for: holiday.date)
+            if dismissed.contains(dateKey) { continue }
             if let existingDay = attendanceDay(for: holiday.date) {
                 if existingDay.dayType == .holiday || !existingDay.isManualOverride {
                     existingDay.dayType = .holiday
@@ -364,7 +367,9 @@ final class AttendanceViewModel {
         if let existing = attendanceDay(for: date) {
             if existing.dayType == .planned {
                 modelContext.delete(existing)
-            } else {
+            } else if existing.dayType == .remote {
+                // Only overwrite remote (unlogged) days — never destroy
+                // office, travel, vacation, holiday, or freeDay entries.
                 existing.dayType = .planned
                 existing.officeName = nil
                 existing.holidayName = nil
@@ -411,6 +416,7 @@ final class AttendanceViewModel {
 
     func deleteHoliday(_ holiday: ManagedHoliday) {
         if let day = attendanceDay(for: holiday.date), day.dayType == .holiday {
+            AppPreferences.addDismissedHoliday(day.dateKey)
             modelContext.delete(day)
         }
         saveAndRefresh(userMessage: "Unable to delete the holiday.")
@@ -427,6 +433,7 @@ final class AttendanceViewModel {
         )
         let allHolidays = fetch(descriptor, userMessage: "Unable to find holidays.")
         for day in allHolidays where day.holidayName == name {
+            AppPreferences.addDismissedHoliday(day.dateKey)
             modelContext.delete(day)
         }
         saveAndRefresh(userMessage: "Unable to delete holidays.")
@@ -574,15 +581,15 @@ final class AttendanceViewModel {
         }
     }
 
-    // MARK: - Spreadsheet Export
+    // MARK: - CSV Export
 
-    func exportSpreadsheet(year: Int) -> String {
+    func exportCSV(startYear: Int) -> String {
         let calendar = Calendar.current
-        let startOfYear = calendar.date(from: DateComponents(year: year, month: 1, day: 1)) ?? Date()
+        let exportStart = calendar.date(from: DateComponents(year: startYear, month: 1, day: 1)) ?? Date()
         let today = calendar.startOfDay(for: Date())
-        let endOfYear = calendar.date(from: DateComponents(year: year, month: 12, day: 31)) ?? today
-        let exportEnd = min(today, endOfYear)
-        let startKey = AttendanceDay.key(for: startOfYear)
+        // Always export from Jan 1 of startYear through today
+        let exportEnd = today
+        let startKey = AttendanceDay.key(for: exportStart)
         let endKey = AttendanceDay.key(for: exportEnd)
 
         let descriptor = FetchDescriptor<AttendanceDay>(
@@ -591,8 +598,11 @@ final class AttendanceViewModel {
         let days = fetch(descriptor, userMessage: "Unable to prepare the export.")
         let dayMap = Dictionary(uniqueKeysWithValues: days.map { ($0.dateKey, $0) })
 
+        // Fetch geo logs for the export range
         let geoDescriptor = FetchDescriptor<GeoLog>(
-            predicate: #Predicate { $0.eventTypeRaw == "entry" },
+            predicate: #Predicate {
+                $0.eventTypeRaw == "entry" && $0.timestamp >= exportStart && $0.timestamp <= exportEnd
+            },
             sortBy: [SortDescriptor(\.timestamp)]
         )
         let geoLogs = (try? modelContext.fetch(geoDescriptor)) ?? []
@@ -606,213 +616,113 @@ final class AttendanceViewModel {
         let dayFmt = DateFormatter(); dayFmt.dateFormat = "EEEE"
         let timeFmt = DateFormatter(); timeFmt.dateFormat = "h:mm a"
 
-        func esc(_ s: String) -> String {
-            s.replacingOccurrences(of: "&", with: "&amp;")
-             .replacingOccurrences(of: "<", with: "&lt;")
-             .replacingOccurrences(of: ">", with: "&gt;")
-             .replacingOccurrences(of: "\"", with: "&quot;")
-        }
-
-        func styleID(_ type: DayType) -> String {
-            switch type {
-            case .office: return "office"
-            case .vacation: return "vacation"
-            case .holiday: return "holiday"
-            case .travel: return "travel"
-            case .freeDay: return "freeDay"
-            case .planned: return "planned"
-            case .remote: return "remote"
+        func csvField(_ s: String) -> String {
+            if s.contains(",") || s.contains("\"") || s.contains("\n") {
+                return "\"\(s.replacingOccurrences(of: "\"", with: "\"\""))\""
             }
+            return s
         }
 
-        // ── XML Spreadsheet with tabs ──
-        var xml = """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <?mso-application progid="Excel.Sheet"?>
-        <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-         xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-        <Styles>
-         <Style ss:ID="Default"><Font ss:Size="11"/></Style>
-         <Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/><Interior ss:Color="#1E3A5F" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="summaryHeader"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/><Interior ss:Color="#374151" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="bold"><Font ss:Bold="1" ss:Size="11"/></Style>
-         <Style ss:ID="time"><Font ss:Color="#6B7280" ss:Size="10"/></Style>
-         <Style ss:ID="autoGeo"><Font ss:Bold="1" ss:Color="#1D4ED8" ss:Size="10"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="manual"><Font ss:Bold="1" ss:Color="#6B7280" ss:Size="10"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="office"><Font ss:Bold="1" ss:Color="#1E40AF" ss:Size="10"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="travel"><Font ss:Bold="1" ss:Color="#991B1B" ss:Size="10"/><Interior ss:Color="#FEE2E2" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="vacation"><Font ss:Bold="1" ss:Color="#065F46" ss:Size="10"/><Interior ss:Color="#D1FAE5" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="holiday"><Font ss:Bold="1" ss:Color="#5B21B6" ss:Size="10"/><Interior ss:Color="#EDE9FE" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="freeDay"><Font ss:Bold="1" ss:Color="#0C4A6E" ss:Size="10"/><Interior ss:Color="#E0F2FE" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="planned"><Font ss:Bold="1" ss:Color="#92400E" ss:Size="10"/><Interior ss:Color="#FEF3C7" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="remote"><Font ss:Bold="1" ss:Color="#374151" ss:Size="10"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="totalRow"><Font ss:Bold="1" ss:Size="11"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/></Style>
-         <Style ss:ID="ahead"><Font ss:Bold="1" ss:Color="#059669" ss:Size="11"/></Style>
-         <Style ss:ID="behind"><Font ss:Bold="1" ss:Color="#DC2626" ss:Size="11"/></Style>
-         <Style ss:ID="even"><Font ss:Bold="1" ss:Color="#6B7280" ss:Size="11"/></Style>
-        </Styles>
-        """
+        var rows = [[String]]()
+        rows.append([
+            "Date",
+            "Day",
+            "Status",
+            "Location",
+            "Check-in",
+            "Logged By",
+            "Counts Toward Target",
+            "Notes"
+        ])
 
-        // ── Tab 1: Daily Log ──
-        xml += "<Worksheet ss:Name=\"Daily Log\"><Table>"
-        xml += "<Column ss:Width=\"100\"/><Column ss:Width=\"80\"/><Column ss:Width=\"70\"/>"
-        xml += "<Column ss:Width=\"80\"/><Column ss:Width=\"130\"/><Column ss:Width=\"80\"/>"
-        xml += "<Row>"
-        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Date</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Day</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Check-in</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Status</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Location</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">Logged By</Data></Cell>"
-        xml += "</Row>\n"
-
-        var current = startOfYear
+        var current = exportStart
         while current <= exportEnd {
             let key = AttendanceDay.key(for: current)
-            if AppPreferences.isWorkDay(current), let day = dayMap[key] {
-                if day.dayType != .remote {
-                    let location: String
-                    switch day.dayType {
-                    case .office: location = esc(day.officeName ?? "Office")
-                    case .holiday: location = esc(day.holidayName ?? "Holiday")
-                    case .vacation: location = "—"
-                    case .travel: location = esc(day.officeName ?? "Travel")
-                    case .freeDay: location = esc(day.officeName ?? "—")
-                    default: location = "—"
-                    }
+            let storedDay = dayMap[key]
 
-                    let checkIn = checkInTimes[key].map { timeFmt.string(from: $0) } ?? ""
-                    let logStyle = day.isAutoLogged ? "autoGeo" : "manual"
-                    let logLabel = day.isAutoLogged ? "Auto (Geo)" : "Manual"
+            // Every calendar day from Jan 1 through today gets a row.
+            // This covers weekends, shift workers, and any work pattern globally.
+            let status: String
+            let location: String
+            let checkIn: String
+            let loggedBy: String
+            let countsTowardTarget: String
+            let notes: String
 
-                    xml += "<Row>"
-                    xml += "<Cell><Data ss:Type=\"String\">\(esc(dateFmt.string(from: current)))</Data></Cell>"
-                    xml += "<Cell><Data ss:Type=\"String\">\(esc(dayFmt.string(from: current)))</Data></Cell>"
-                    xml += "<Cell ss:StyleID=\"time\"><Data ss:Type=\"String\">\(esc(checkIn))</Data></Cell>"
-                    xml += "<Cell ss:StyleID=\"\(styleID(day.dayType))\"><Data ss:Type=\"String\">\(esc(day.dayType.label))</Data></Cell>"
-                    xml += "<Cell><Data ss:Type=\"String\">\(location)</Data></Cell>"
-                    xml += "<Cell ss:StyleID=\"\(logStyle)\"><Data ss:Type=\"String\">\(logLabel)</Data></Cell>"
-                    xml += "</Row>\n"
+            if let day = storedDay {
+                status = day.dayType.label
+                switch day.dayType {
+                case .office:
+                    location = day.officeName ?? "Office"
+                case .holiday:
+                    location = day.holidayName ?? "Holiday"
+                case .travel:
+                    location = day.officeName ?? "Travel"
+                case .freeDay:
+                    location = day.officeName ?? "Office Credit"
+                default:
+                    location = ""
                 }
+
+                checkIn = day.dayType == .office
+                    ? (checkInTimes[key].map { timeFmt.string(from: $0) } ?? "")
+                    : ""
+
+                if day.isAutoLogged {
+                    loggedBy = "Auto (Geo)"
+                } else if day.isManualOverride {
+                    loggedBy = "Manual"
+                } else {
+                    loggedBy = "System"
+                }
+
+                countsTowardTarget = day.dayType.countsTowardTarget ? "Yes" : "No"
+                notes = day.notes ?? ""
+            } else {
+                status = "Unlogged"
+                location = ""
+                checkIn = ""
+                loggedBy = ""
+                countsTowardTarget = "No"
+                notes = ""
             }
+
+            rows.append([
+                dateFmt.string(from: current),
+                dayFmt.string(from: current),
+                status,
+                location,
+                checkIn,
+                loggedBy,
+                countsTowardTarget,
+                notes
+            ])
+
             guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
             current = nextDay
         }
 
-        xml += "</Table></Worksheet>\n"
-
-        // ── Tab 2: Summary ──
-        xml += "<Worksheet ss:Name=\"Summary\"><Table>"
-        xml += "<Column ss:Width=\"110\"/><Column ss:Width=\"70\"/><Column ss:Width=\"70\"/>"
-        xml += "<Column ss:Width=\"70\"/><Column ss:Width=\"70\"/><Column ss:Width=\"70\"/><Column ss:Width=\"100\"/>"
-
-        // Monthly summary
-        xml += "<Row>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Month</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Office</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Travel</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Vacation</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Holidays</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Credit</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Total Credited</Data></Cell>"
-        xml += "</Row>\n"
-
-        let monthNames = DateFormatter().monthSymbols ?? []
-        let currentYear = calendar.component(.year, from: today)
-        let lastMonth = year < currentYear ? 12 : calendar.component(.month, from: today)
-        var yO = 0, yT = 0, yV = 0, yH = 0, yC = 0, yCr = 0
-
-        for month in 1...lastMonth {
-            guard let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
-                  let nextMonth = calendar.date(byAdding: .month, value: 1, to: monthStart) else { continue }
-            let cappedEnd = min(calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? monthStart, exportEnd)
-            var o = 0, t = 0, v = 0, h = 0, c = 0
-            var d = monthStart
-            while d <= cappedEnd {
-                if let day = dayMap[AttendanceDay.key(for: d)] {
-                    switch day.dayType {
-                    case .office: o += 1; case .travel: t += 1; case .vacation: v += 1
-                    case .holiday: h += 1; case .freeDay: c += 1; default: break
-                    }
-                }
-                guard let next = calendar.date(byAdding: .day, value: 1, to: d) else { break }
-                d = next
-            }
-            let types = AppPreferences.dayTypesCountingTowardTarget
-            var cr = o
-            if types.contains("travel") { cr += t }
-            if types.contains("vacation") { cr += v }
-            if types.contains("holiday") { cr += h }
-            if types.contains("freeDay") { cr += c }
-            yO += o; yT += t; yV += v; yH += h; yC += c; yCr += cr
-
-            let name = month <= monthNames.count ? monthNames[month - 1] : "Month \(month)"
-            xml += "<Row>"
-            xml += "<Cell ss:StyleID=\"bold\"><Data ss:Type=\"String\">\(name)</Data></Cell>"
-            xml += "<Cell ss:StyleID=\"office\"><Data ss:Type=\"Number\">\(o)</Data></Cell>"
-            xml += "<Cell ss:StyleID=\"travel\"><Data ss:Type=\"Number\">\(t)</Data></Cell>"
-            xml += "<Cell ss:StyleID=\"vacation\"><Data ss:Type=\"Number\">\(v)</Data></Cell>"
-            xml += "<Cell ss:StyleID=\"holiday\"><Data ss:Type=\"Number\">\(h)</Data></Cell>"
-            xml += "<Cell ss:StyleID=\"freeDay\"><Data ss:Type=\"Number\">\(c)</Data></Cell>"
-            xml += "<Cell ss:StyleID=\"bold\"><Data ss:Type=\"Number\">\(cr)</Data></Cell>"
-            xml += "</Row>\n"
-        }
-
-        xml += "<Row>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"String\">Year Total</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yO)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yT)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yV)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yH)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yC)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yCr)</Data></Cell>"
-        xml += "</Row>\n"
-
-        // Spacer then period summary
-        xml += "<Row></Row><Row></Row>\n"
-        let periodTarget = PeriodHelper.targetDaysPerPeriod
-        let periodLabel = AppPreferences.trackingPeriod.shortLabel
-
-        xml += "<Row>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">\(periodLabel)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Credited</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Target</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"summaryHeader\"><Data ss:Type=\"String\">Delta</Data></Cell>"
-        xml += "</Row>\n"
-
-        var yearTotal = 0
-        for period in PeriodHelper.allPeriods(for: year) {
-            guard period.startDate <= today else { continue }
-            let count = officeDayCount(in: period)
-            yearTotal += count
-            let delta = count - periodTarget
-            let sign = delta >= 0 ? "+" : ""
-            let cls = delta > 0 ? "ahead" : (delta < 0 ? "behind" : "even")
-            xml += "<Row>"
-            xml += "<Cell ss:StyleID=\"bold\"><Data ss:Type=\"String\">\(esc(period.label))</Data></Cell>"
-            xml += "<Cell><Data ss:Type=\"Number\">\(count)</Data></Cell>"
-            xml += "<Cell><Data ss:Type=\"Number\">\(periodTarget)</Data></Cell>"
-            xml += "<Cell ss:StyleID=\"\(cls)\"><Data ss:Type=\"String\">\(sign)\(delta)</Data></Cell>"
-            xml += "</Row>\n"
-        }
-
-        let yearTarget = periodTarget * PeriodHelper.periodsPerYear
-        let yearDelta = yearTotal - yearTarget
-        let yearSign = yearDelta >= 0 ? "+" : ""
-        let yearCls = yearDelta > 0 ? "ahead" : (yearDelta < 0 ? "behind" : "even")
-        xml += "<Row>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"String\">Year Total</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yearTotal)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"totalRow\"><Data ss:Type=\"Number\">\(yearTarget)</Data></Cell>"
-        xml += "<Cell ss:StyleID=\"\(yearCls)\"><Data ss:Type=\"String\">\(yearSign)\(yearDelta)</Data></Cell>"
-        xml += "</Row>\n"
-
-        xml += "</Table></Worksheet>\n</Workbook>"
-        return xml
+        return rows
+            .map { row in row.map(csvField).joined(separator: ",") }
+            .joined(separator: "\n")
     }
 
-    /// Legacy CSV accessor
-    func exportCSV(year: Int) -> String { exportSpreadsheet(year: year) }
+    func exportCSVFileURL(startYear: Int) throws -> URL {
+        let content = exportCSV(startYear: startYear)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM.dd.yyyy"
+        let stamp = formatter.string(from: Date())
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("My Office Days \(stamp).csv")
+
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+
+        try content.write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
 
     // MARK: - Import
 
@@ -984,5 +894,37 @@ final class AttendanceViewModel {
 
     private func periodBounds(for period: PeriodInfo) -> (String, String) {
         (AttendanceDay.key(for: period.startDate), AttendanceDay.key(for: period.endDate))
+    }
+
+    // MARK: - Delete All Data
+
+    func deleteAllData() {
+        // Delete all AttendanceDay records
+        let dayDescriptor = FetchDescriptor<AttendanceDay>()
+        let allDays = fetch(dayDescriptor, userMessage: "Unable to fetch attendance data.")
+        for day in allDays { modelContext.delete(day) }
+
+        // Delete all GeoLog records
+        let logDescriptor = FetchDescriptor<GeoLog>()
+        let allLogs = fetch(logDescriptor, userMessage: "Unable to fetch geo logs.")
+        for log in allLogs { modelContext.delete(log) }
+
+        // Delete all OfficeLocation records
+        let officeDescriptor = FetchDescriptor<OfficeLocation>()
+        let allOffices = fetch(officeDescriptor, userMessage: "Unable to fetch offices.")
+        for office in allOffices { modelContext.delete(office) }
+
+        // Clear UserDefaults preferences
+        AppPreferences.clearDismissedHolidays()
+
+        // Reset all defaults
+        let defaults = UserDefaults.standard
+        let domain = Bundle.main.bundleIdentifier ?? ""
+        defaults.removePersistentDomain(forName: domain)
+        defaults.synchronize()
+
+        saveChanges("Unable to delete all data.")
+        invalidateMonthCache()
+        refreshSnapshot()
     }
 }
