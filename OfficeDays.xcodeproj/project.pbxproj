@@ -168,7 +168,7 @@
 			dependencies = (
 			);
 			name = OfficeDays;
-			productName = "My Office Days";
+			productName = "Quota";
 			productReference = A97C29AD63741CF438998CE6 /* OfficeDays.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -251,7 +251,7 @@
 				DEVELOPMENT_TEAM = 5ZBZ278LX6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OfficeDays/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "My Office Days";
+				INFOPLIST_KEY_CFBundleDisplayName = "Quota";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -262,7 +262,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.officedays.app;
-				PRODUCT_NAME = "My Office Days";
+				PRODUCT_NAME = "Quota";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -299,7 +299,7 @@
 				DEVELOPMENT_TEAM = 5ZBZ278LX6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OfficeDays/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "My Office Days";
+				INFOPLIST_KEY_CFBundleDisplayName = "Quota";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -310,7 +310,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.officedays.app;
-				PRODUCT_NAME = "My Office Days";
+				PRODUCT_NAME = "Quota";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;

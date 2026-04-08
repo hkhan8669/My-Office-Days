@@ -144,7 +144,7 @@ struct SplashView: View {
     }
 
     private var titleView: some View {
-        Text("My Office Days")
+        Text("Quota")
             .font(.system(size: 32, weight: .bold, design: .rounded))
             .foregroundStyle(
                 LinearGradient(

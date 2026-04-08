@@ -92,7 +92,7 @@ struct DashboardView: View {
                 viewModel.refreshSnapshot()
                 geofenceService.handleAppDidBecomeActive()
             }
-            .navigationTitle("My Office Days")
+            .navigationTitle("Quota")
             .navigationBarTitleDisplayMode(.large)
         }
         .onAppear {

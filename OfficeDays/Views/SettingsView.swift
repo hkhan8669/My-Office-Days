@@ -1261,8 +1261,8 @@ struct SettingsView: View {
     private func sendFeedbackEmail() {
         let email = "kviction@gmail.com"
         let ticketNumber = generateTicketID()
-        let subject = "My Office Days Feedback [\(ticketNumber)]"
-        let body = "\n\n---\nTicket: \(ticketNumber)\nApp Version: 1.0.0\niOS \(UIDevice.current.systemVersion)\n\(UIDevice.current.model)"
+        let subject = "Quota Feedback [\(ticketNumber)]"
+        let body = "\n\n---\nTicket: \(ticketNumber)\nQuota v1.0.0\niOS \(UIDevice.current.systemVersion)\n\(UIDevice.current.model)"
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         if let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)&body=\(encodedBody)") {

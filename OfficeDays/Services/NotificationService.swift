@@ -80,7 +80,7 @@ final class NotificationService {
         let remaining = max(0, target - officeDays)
         let periodName = AppPreferences.trackingPeriod.shortLabel.lowercased()
         let content = UNMutableNotificationContent()
-        content.title = "My Office Days"
+        content.title = "Quota"
         content.body = remaining > 0
             ? "\(periodLabel): \(officeDays)/\(target) days completed. \(remaining) remaining this \(periodName)."
             : "\(periodLabel): Target reached at \(officeDays)/\(target). Nice work."
@@ -103,7 +103,7 @@ final class NotificationService {
 
     func sendCheckInConfirmation(officeName: String) async throws {
         let content = UNMutableNotificationContent()
-        content.title = "My Office Days"
+        content.title = "Quota"
         content.body = "You've arrived at \(officeName). Your attendance has been logged."
         content.sound = .default
 

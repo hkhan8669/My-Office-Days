@@ -10,7 +10,8 @@ struct ContentView: View {
     @State private var viewModel: AttendanceViewModel?
     @StateObject private var geofenceService = GeofenceService()
     @State private var showTrackingOnboarding = false
-    @State private var showSplash = true
+    @AppStorage("hasSeenSplash") private var hasSeenSplash = false
+    @State private var showSplash = false
     @State private var showViewModelError = false
     @State private var showTrackingError = false
 
@@ -66,6 +67,11 @@ struct ContentView: View {
         }
         .task {
             guard viewModel == nil else { return }
+            // Show splash only on very first app launch
+            if !hasSeenSplash {
+                showSplash = true
+                hasSeenSplash = true
+            }
             let vm = AttendanceViewModel(modelContext: modelContext)
             vm.seedIfNeeded()
             viewModel = vm
@@ -204,7 +210,7 @@ private struct OnboardingFlowView: View {
             }
             .padding(.bottom, 28)
 
-            Text("My Office Days")
+            Text("Quota")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
                 .padding(.bottom, 8)
@@ -590,7 +596,7 @@ private struct OnboardingFlowView: View {
                         .foregroundStyle(Theme.textTertiary)
                         .tracking(1)
 
-                    Text("My Office Days uses geofencing to send you a reminder when you arrive at one of your saved locations, so you can log your attendance. For this to work in the background, location access must be set to \"Always Allow.\"")
+                    Text("Quota uses geofencing to send you a reminder when you arrive at one of your saved locations, so you can log your attendance. For this to work in the background, location access must be set to \"Always Allow.\"")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -829,7 +835,7 @@ private struct AlwaysLocationRequiredView: View {
                         .font(.title3.weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
 
-                    Text("My Office Days needs \"Always\" location access to send you arrival reminders when you reach a saved location — even when the app is in the background.")
+                    Text("Quota needs \"Always\" location access to send you arrival reminders when you reach a saved location — even when the app is in the background.")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
