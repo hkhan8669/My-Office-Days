@@ -83,6 +83,7 @@ final class AttendanceViewModel {
     // MARK: - Seed Data
 
     func seedIfNeeded() {
+        backfillOfficeStableIDs()
         seedOffices()
         migrateLegacyHolidays()
         removeGoodFridayHolidays()
@@ -755,6 +756,21 @@ final class AttendanceViewModel {
     }
 
     // MARK: - Helpers
+
+    /// Backfill stableID for offices created before the stableID property was added.
+    /// Without this, existing offices have stableID="" which breaks geofence region tracking.
+    private func backfillOfficeStableIDs() {
+        let descriptor = FetchDescriptor<OfficeLocation>()
+        let allOffices = fetch(descriptor, userMessage: "Unable to load offices for migration.")
+        var updated = false
+        for office in allOffices where office.stableID.isEmpty {
+            office.stableID = UUID().uuidString
+            updated = true
+        }
+        if updated {
+            saveChanges("Unable to save office ID migration.")
+        }
+    }
 
     private func seedOffices() {
         let descriptor = FetchDescriptor<OfficeLocation>()

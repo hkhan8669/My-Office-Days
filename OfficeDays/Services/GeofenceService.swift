@@ -156,13 +156,11 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func handleAppDidBecomeActive() {
-        // Clear entry timestamps from previous days so today's geofence
-        // events are properly recorded in the log.
-        let todayStart = Calendar.current.startOfDay(for: now())
-        for (office, timestamp) in entryTimestamps {
-            if timestamp < todayStart {
-                clearEntryTimestamp(for: office)
-            }
+        // Clear ALL entry timestamps so every app foreground gets a fresh
+        // geofence detection. Without this, same-day timestamps prevent
+        // new GeoLog entries when the user closes and reopens the app.
+        for office in entryTimestamps.keys {
+            clearEntryTimestamp(for: office)
         }
 
         authorizationStatus = locationManager.authorizationStatus
