@@ -247,11 +247,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 5ZBZ278LX6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OfficeDays/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Quota";
+				INFOPLIST_KEY_CFBundleDisplayName = "Quota Track";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -295,11 +295,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 5ZBZ278LX6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OfficeDays/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Quota";
+				INFOPLIST_KEY_CFBundleDisplayName = "Quota Track";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
