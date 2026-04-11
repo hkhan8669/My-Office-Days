@@ -132,6 +132,35 @@ final class NotificationService {
         }
     }
 
+    func sendDepartureConfirmation(officeName: String) async throws {
+        let content = UNMutableNotificationContent()
+        content.title = "Quota"
+        content.body = "You've left \(officeName). See you next time!"
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let today = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none)
+        let safeOfficeName = officeName.replacingOccurrences(of: " ", with: "-").prefix(30)
+        let request = UNNotificationRequest(
+            identifier: "checkout-\(safeOfficeName)-\(today)",
+            content: content,
+            trigger: trigger
+        )
+
+        try await add(request)
+    }
+
+    func sendDepartureConfirmation(officeName: String, completion: @escaping (Error?) -> Void) {
+        Task {
+            do {
+                try await sendDepartureConfirmation(officeName: officeName)
+                completion(nil)
+            } catch {
+                completion(error)
+            }
+        }
+    }
+
     func removeWeeklyNudge() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["monday-nudge", "weekly-nudge"])
     }

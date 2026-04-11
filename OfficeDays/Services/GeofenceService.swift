@@ -156,11 +156,14 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func handleAppDidBecomeActive() {
-        // Clear ALL entry timestamps so every app foreground gets a fresh
-        // geofence detection. Without this, same-day timestamps prevent
-        // new GeoLog entries when the user closes and reopens the app.
-        for office in entryTimestamps.keys {
-            clearEntryTimestamp(for: office)
+        // Only clear entry timestamps from PREVIOUS days.
+        // Same-day timestamps must persist to prevent duplicate GeoLog entries
+        // when the user opens the app multiple times in one day.
+        let todayStart = Calendar.current.startOfDay(for: now())
+        for (office, timestamp) in entryTimestamps {
+            if timestamp < todayStart {
+                clearEntryTimestamp(for: office)
+            }
         }
 
         authorizationStatus = locationManager.authorizationStatus
@@ -259,6 +262,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
 
         recordGeoLog(eventType: .exit, locationName: name)
         clearEntryTimestamp(for: regionID)
+        sendDepartureNotification(officeName: name)
         refreshStatusMessage()
 
         UIApplication.shared.endBackgroundTask(taskID)
@@ -280,9 +284,12 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             let alreadyTracked = entryTimestamps[regionID] != nil
             if !alreadyTracked {
                 persistEntryTimestamp(now(), for: regionID)
-                recordGeoLog(eventType: .entry, locationName: name)
+                // No GeoLog here — only didEnterRegion creates GeoLog entries
+                // so timestamps reflect actual arrival, not app-open time.
                 sendArrivalNotification(officeName: name)
             }
+            // Always log the attendance day (idempotent if already office).
+            // This ensures manual Remote changes get overwritten by physical presence.
             logOfficeDayIfNeeded(officeName: name)
         case .outside:
             clearEntryTimestamp(for: regionID)
@@ -434,9 +441,29 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
 
-    /// Resolve a region stableID to the office name. Falls back to the ID itself.
+    /// Resolve a region stableID to the office name.
+    /// Also checks by name for backward compatibility with old regions.
     private func officeName(for regionIdentifier: String) -> String {
-        officesProvider?().first(where: { $0.stableID == regionIdentifier })?.name ?? regionIdentifier
+        let offices = officesProvider?() ?? []
+        // First try stableID match (new regions)
+        if let office = offices.first(where: { $0.stableID == regionIdentifier }) {
+            return office.name
+        }
+        // Fallback: try name match (old regions registered before stableID)
+        if let office = offices.first(where: { $0.name == regionIdentifier }) {
+            return office.name
+        }
+        return "Unknown Office"
+    }
+
+    private func sendDepartureNotification(officeName: String) {
+        notificationService.sendDepartureConfirmation(officeName: officeName) { [weak self] error in
+            DispatchQueue.main.async {
+                if let error {
+                    self?.errorMessage = "Departure notification failed: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     private func persistEntryTimestamp(_ date: Date, for officeName: String) {
