@@ -284,15 +284,15 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             let alreadyTracked = entryTimestamps[regionID] != nil
             if !alreadyTracked {
                 persistEntryTimestamp(now(), for: regionID)
-                // One GeoLog per office per day. Home office users never
-                // trigger didEnterRegion (they never leave), so this is
-                // their only path to get a log entry. The alreadyTracked
-                // check prevents duplicates on subsequent app opens.
                 recordGeoLog(eventType: .entry, locationName: name)
                 sendArrivalNotification(officeName: name)
+            } else if !hasGeoLogEntryToday(for: name) {
+                // Safety net: timestamp exists but no GeoLog for today
+                // (e.g., app upgraded mid-day from a build that didn't
+                // create GeoLog from didDetermineState).
+                recordGeoLog(eventType: .entry, locationName: name)
             }
             // Always log the attendance day (idempotent if already office).
-            // This ensures manual Remote changes get overwritten by physical presence.
             logOfficeDayIfNeeded(officeName: name)
         case .outside:
             clearEntryTimestamp(for: regionID)
@@ -457,6 +457,21 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             return office.name
         }
         return "Unknown Office"
+    }
+
+    /// Check if a GeoLog entry already exists for today for the given office.
+    private func hasGeoLogEntryToday(for officeName: String) -> Bool {
+        guard let context = modelContext else { return false }
+        let todayStart = Calendar.current.startOfDay(for: now())
+        let entryType = "entry"
+        let descriptor = FetchDescriptor<GeoLog>(
+            predicate: #Predicate {
+                $0.eventTypeRaw == entryType &&
+                $0.locationName == officeName &&
+                $0.timestamp >= todayStart
+            }
+        )
+        return ((try? context.fetchCount(descriptor)) ?? 0) > 0
     }
 
     private func sendDepartureNotification(officeName: String) {
