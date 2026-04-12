@@ -19,6 +19,12 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
     private var attendanceRefreshHandler: (() -> Void)?
     private var entryTimestamps: [String: Date]
 
+    // GeoLog events captured before `configure()` has supplied a modelContext.
+    // iOS can launch the app in the background for a geofence event before
+    // SwiftUI's .task wires up the context — without this queue, the exit
+    // (or entry) is silently dropped while the notification still fires.
+    private var pendingGeoLogs: [(timestamp: Date, locationName: String, eventType: GeoLog.EventType)] = []
+
     @Published var authorizationStatus: CLAuthorizationStatus
     @Published var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
     @Published var lastCheckedInOffice: String?
@@ -58,6 +64,7 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         self.modelContext = modelContext
         self.officesProvider = officesProvider
         self.attendanceRefreshHandler = onAttendanceChange
+        flushPendingGeoLogs()
         refreshMonitoring()
         handleAppDidBecomeActive()
     }
@@ -509,11 +516,38 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
         }
     }
 
-    private func recordGeoLog(eventType: GeoLog.EventType, locationName: String) {
-        guard let context = modelContext else { return }
+    // `internal` (not `private`) so unit tests can drive it directly.
+    func recordGeoLog(eventType: GeoLog.EventType, locationName: String) {
+        guard let context = modelContext else {
+            // Background launch before modelContext is wired — queue it.
+            pendingGeoLogs.append((now(), locationName, eventType))
+            return
+        }
         let log = GeoLog(timestamp: now(), locationName: locationName, eventType: eventType)
         context.insert(log)
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            errorMessage = "Failed to save geo log: \(error.localizedDescription)"
+        }
+    }
+
+    private func flushPendingGeoLogs() {
+        guard let context = modelContext, !pendingGeoLogs.isEmpty else { return }
+        for pending in pendingGeoLogs {
+            let log = GeoLog(
+                timestamp: pending.timestamp,
+                locationName: pending.locationName,
+                eventType: pending.eventType
+            )
+            context.insert(log)
+        }
+        pendingGeoLogs.removeAll()
+        do {
+            try context.save()
+        } catch {
+            errorMessage = "Failed to flush queued geo logs: \(error.localizedDescription)"
+        }
     }
 
     private static func loadEntryTimestamps(from userDefaults: UserDefaults, key: String) -> [String: Date] {

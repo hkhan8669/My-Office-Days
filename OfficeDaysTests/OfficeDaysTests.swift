@@ -1,4 +1,5 @@
 import XCTest
+import SwiftData
 @testable import OfficeDays
 
 final class OfficeDaysTests: XCTestCase {
@@ -430,5 +431,68 @@ final class OfficeDaysTests: XCTestCase {
         let regex = #"^\d{4}-\d{2}-\d{2}$"#
         XCTAssertNotNil(key.range(of: regex, options: .regularExpression),
                         "Key '\(key)' should match yyyy-MM-dd format")
+    }
+
+    // MARK: - GeofenceService GeoLog queue (regression: background exit dropped)
+
+    /// Regression test: when iOS launches the app in the background for a
+    /// geofence exit, `recordGeoLog` can fire before `configure()` supplies a
+    /// modelContext. Previously the event was silently dropped while the
+    /// departure notification still fired — user saw a notification but no log
+    /// entry. The fix queues the event and flushes on `configure()`.
+    @MainActor
+    func testRecordGeoLog_beforeConfigure_isQueuedAndFlushedOnConfigure() throws {
+        let container = try ModelContainer(
+            for: AttendanceDay.self, OfficeLocation.self, Holiday.self, GeoLog.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+
+        let service = GeofenceService()
+
+        // Simulate an exit event arriving before configure() runs.
+        service.recordGeoLog(eventType: .exit, locationName: "Home Office")
+
+        // Nothing should be persisted yet — modelContext wasn't set.
+        let beforeConfigure = try context.fetch(FetchDescriptor<GeoLog>())
+        XCTAssertEqual(beforeConfigure.count, 0,
+                       "No GeoLog should be persisted before configure()")
+
+        // Configure — this should flush the queued event.
+        service.configure(
+            modelContext: context,
+            officesProvider: { [] },
+            onAttendanceChange: {}
+        )
+
+        let afterConfigure = try context.fetch(FetchDescriptor<GeoLog>())
+        XCTAssertEqual(afterConfigure.count, 1,
+                       "Queued GeoLog should be flushed on configure()")
+        XCTAssertEqual(afterConfigure.first?.locationName, "Home Office")
+        XCTAssertEqual(afterConfigure.first?.eventType, .exit)
+    }
+
+    /// Once configured, `recordGeoLog` should persist immediately (no queueing).
+    @MainActor
+    func testRecordGeoLog_afterConfigure_persistsImmediately() throws {
+        let container = try ModelContainer(
+            for: AttendanceDay.self, OfficeLocation.self, Holiday.self, GeoLog.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+
+        let service = GeofenceService()
+        service.configure(
+            modelContext: context,
+            officesProvider: { [] },
+            onAttendanceChange: {}
+        )
+
+        service.recordGeoLog(eventType: .entry, locationName: "Main Office")
+
+        let logs = try context.fetch(FetchDescriptor<GeoLog>())
+        XCTAssertEqual(logs.count, 1)
+        XCTAssertEqual(logs.first?.locationName, "Main Office")
+        XCTAssertEqual(logs.first?.eventType, .entry)
     }
 }
