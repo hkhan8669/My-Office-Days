@@ -284,8 +284,11 @@ final class GeofenceService: NSObject, ObservableObject, CLLocationManagerDelega
             let alreadyTracked = entryTimestamps[regionID] != nil
             if !alreadyTracked {
                 persistEntryTimestamp(now(), for: regionID)
-                // No GeoLog here — only didEnterRegion creates GeoLog entries
-                // so timestamps reflect actual arrival, not app-open time.
+                // One GeoLog per office per day. Home office users never
+                // trigger didEnterRegion (they never leave), so this is
+                // their only path to get a log entry. The alreadyTracked
+                // check prevents duplicates on subsequent app opens.
+                recordGeoLog(eventType: .entry, locationName: name)
                 sendArrivalNotification(officeName: name)
             }
             // Always log the attendance day (idempotent if already office).
