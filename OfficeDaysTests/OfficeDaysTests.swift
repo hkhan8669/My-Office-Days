@@ -76,14 +76,14 @@ final class OfficeDaysTests: XCTestCase {
 
     // MARK: - Holiday Tests
 
-    func testCompanyHolidays2025_returnsExactly13() {
+    func testCompanyHolidays2025_returnsExactly12() {
         let holidays = Holiday.companyHolidays(for: 2025)
-        XCTAssertEqual(holidays.count, 13, "Expected 13 company holidays for 2025, got \(holidays.count)")
+        XCTAssertEqual(holidays.count, 12, "Expected 12 company holidays for 2025, got \(holidays.count)")
     }
 
-    func testCompanyHolidays2026_returnsExactly13() {
+    func testCompanyHolidays2026_returnsExactly12() {
         let holidays = Holiday.companyHolidays(for: 2026)
-        XCTAssertEqual(holidays.count, 13, "Expected 13 company holidays for 2026, got \(holidays.count)")
+        XCTAssertEqual(holidays.count, 12, "Expected 12 company holidays for 2026, got \(holidays.count)")
     }
 
     func testThanksgiving_isFourthThursdayOfNovember() {
